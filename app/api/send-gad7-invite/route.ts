@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { Resend } from 'resend';
+import sgMail from '@sendgrid/mail';
 import { createClient } from '@supabase/supabase-js';
 
-const resend = new Resend(process.env.RESEND_API_KEY!);
+sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE!,
@@ -60,14 +60,12 @@ export async function POST(req: Request) {
       </div>
     `;
 
-    const { error: emailError } = await resend.emails.send({
-      from: process.env.RESEND_FROM!,
+    await sgMail.send({
+      from: process.env.SENDGRID_FROM!,
       to: email,
       subject: 'Questionario GAD-7 - Therap-IA',
       html
     });
-
-    if (emailError) throw emailError;
 
     return NextResponse.json({ ok: true, token });
   } catch (e: any) {

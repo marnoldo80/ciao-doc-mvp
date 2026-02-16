@@ -52,13 +52,13 @@ export default function TherapistLayout({ children }: { children: React.ReactNod
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #1e3a8a 0%, #312e81 100%)',
+      background: 'linear-gradient(180deg, #10162a 0%, #0b0f1c 100%)',
       fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif'
     }}>
-      {/* NUOVO HEADER con logo cIAo-doc + menu orizzontale viola */}
+      {/* HEADER - Dark theme like login */}
       <header style={{
-        background: 'rgba(0,0,0,0.1)',
-        borderBottom: '1px solid rgba(255,255,255,0.1)',
+        background: '#141a2c',
+        borderBottom: '2px solid #26304b',
         padding: '16px 24px'
       }}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -71,33 +71,51 @@ export default function TherapistLayout({ children }: { children: React.ReactNod
             />
           </div>
           
-          {/* Menu Orizzontale SOLO: Pazienti, Appuntamenti, Personal Branding, Logout */}
-          <nav className="flex items-center gap-6">
-            <Link 
+          {/* Menu Orizzontale - Dark theme */}
+          <nav className="flex items-center gap-4">
+            <Link
               href="/app/therapist/pazienti"
-              className="px-4 py-2 rounded-lg text-white font-medium transition-colors duration-200"
-              style={{ backgroundColor: '#9333ea' }}
+              className="px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105"
+              style={{
+                background: '#7aa2ff',
+                color: '#0b1022',
+                boxShadow: '0 4px 12px rgba(122, 162, 255, 0.25)'
+              }}
             >
               Pazienti
             </Link>
-            <Link 
+            <Link
               href="/app/therapist/appuntamenti"
-              className="px-4 py-2 rounded-lg text-white font-medium transition-colors duration-200"
-              style={{ backgroundColor: '#9333ea' }}
+              className="px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105"
+              style={{
+                background: '#7aa2ff',
+                color: '#0b1022',
+                boxShadow: '0 4px 12px rgba(122, 162, 255, 0.25)'
+              }}
             >
               Appuntamenti
             </Link>
-            <Link 
+            <Link
               href="/app/therapist/personal-branding"
-              className="px-4 py-2 rounded-lg text-white font-medium transition-colors duration-200"
-              style={{ backgroundColor: '#9333ea' }}
+              className="px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105"
+              style={{
+                background: '#7aa2ff',
+                color: '#0b1022',
+                boxShadow: '0 4px 12px rgba(122, 162, 255, 0.25)'
+              }}
             >
               Personal Branding
             </Link>
-            <button 
+            <button
               onClick={logout}
-              className="px-4 py-2 rounded-lg text-white font-medium transition-colors duration-200"
-              style={{ backgroundColor: '#9333ea' }}
+              className="px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105"
+              style={{
+                background: '#7aa2ff',
+                color: '#0b1022',
+                boxShadow: '0 4px 12px rgba(122, 162, 255, 0.25)',
+                border: 'none',
+                cursor: 'pointer'
+              }}
             >
               Logout
             </button>

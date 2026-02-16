@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { Resend } from "resend";
+import sgMail from '@sendgrid/mail';
+
+sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
 
 export async function POST(req: Request) {
   try {
@@ -16,8 +18,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
-    const resend = new Resend(process.env.RESEND_API_KEY!);
-    const from = process.env.RESEND_FROM || "onboarding@resend.dev";
+    const from = process.env.SENDGRID_FROM!;
 
     const subject = "Risultati GAD-7";
     const html = `
@@ -31,10 +32,9 @@ export async function POST(req: Request) {
       <p>Grazie.</p>
     `;
 
-    const { data, error } = await resend.emails.send({ from, to, subject, html });
-    if (error) return NextResponse.json({ error: error.message || "Send failed" }, { status: 500 });
+    await sgMail.send({ from, to, subject, html });
 
-    return NextResponse.json({ ok: true, id: data?.id ?? null });
+    return NextResponse.json({ ok: true });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || "Error" }, { status: 500 });
   }
