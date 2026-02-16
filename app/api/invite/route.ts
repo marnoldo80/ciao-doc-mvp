@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   if (payload.patientId) inviteUrl.searchParams.set('p', payload.patientId);
   if (payload.therapistId) inviteUrl.searchParams.set('t', payload.therapistId);
 
-  // TODO: sostituire con invio email reale (SMTP/Resend/SendGrid)
+  // TODO: sostituire con invio email reale (attualmente usa SendGrid)
   console.log('[INVITE_STUB]', {
     to: email,
     inviteUrl: inviteUrl.toString(),

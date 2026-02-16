@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { Resend } from 'resend';
+import sgMail from '@sendgrid/mail';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,7 +8,7 @@ const supabaseAdmin = createClient(
   { auth: { persistSession: false } }
 );
 
-const resend = new Resend(process.env.RESEND_API_KEY!);
+sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
 
 export async function POST(request: NextRequest) {
   try {
@@ -57,8 +57,8 @@ export async function POST(request: NextRequest) {
       // Invia email con link sicuro
       const resetUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/reset-password?token=${resetToken}`;
       
-      await resend.emails.send({
-        from: process.env.RESEND_FROM!,
+      await sgMail.send({
+        from: process.env.SENDGRID_FROM!,
         to: email,
         subject: 'Reset Password - cIAo-doc',
         html: `
