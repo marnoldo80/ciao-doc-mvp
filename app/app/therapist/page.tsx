@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import AlertsWidget from '@/components/AlertsWidget';
 import CalendarPicker from '@/components/CalendarPicker';
@@ -25,6 +26,7 @@ function AlertsWidgetWrapper() {
 }
 
 export default function Page() {
+  const router = useRouter();
   const [err, setErr] = useState<string|null>(null);
   const [therapist, setTherapist] = useState<{ display_name: string|null; address: string|null; vat_number: string|null; }|null>(null);
   const [allPatients, setAllPatients] = useState<any[]>([]);
@@ -253,6 +255,7 @@ export default function Page() {
 
           {/* Prossimi Appuntamenti - Dark theme */}
           <div
+            onClick={() => router.push('/app/therapist/appuntamenti')}
             className="p-8 rounded-2xl transition-all duration-300 hover:scale-105 hover:-translate-y-1 animate-fadeIn"
             style={{
               background: '#141a2c',
@@ -260,7 +263,8 @@ export default function Page() {
               boxShadow: '0 12px 32px rgba(0,0,0,0.3)',
               minHeight: '240px',
               animationDelay: '400ms',
-              color: '#f1f5ff'
+              color: '#f1f5ff',
+              cursor: 'pointer'
             }}
           >
             <h2 className="text-xl font-semibold mb-4" style={{ color: '#f1f5ff' }}>📋 Prossimi Appuntamenti</h2>
@@ -288,9 +292,9 @@ export default function Page() {
               )}
             </div>
             {nextAppts.length > 3 && (
-              <Link href="/app/therapist/appuntamenti" className="text-sm block text-center mt-3 transition-colors" style={{ color: '#7aa2ff' }}>
+              <div className="text-sm text-center mt-3 transition-colors" style={{ color: '#7aa2ff' }}>
                 Vedi tutti ({nextAppts.length}) →
-              </Link>
+              </div>
             )}
           </div>
 
@@ -335,6 +339,7 @@ export default function Page() {
 
           {/* Alert e Notifiche - Dark theme */}
           <div
+            onClick={() => router.push('/app/therapist/alerts')}
             className="p-8 rounded-2xl transition-all duration-300 hover:scale-105 hover:-translate-y-1 animate-fadeIn"
             style={{
               background: '#141a2c',
@@ -342,7 +347,8 @@ export default function Page() {
               boxShadow: '0 12px 32px rgba(0,0,0,0.3)',
               minHeight: '240px',
               animationDelay: '600ms',
-              color: '#f1f5ff'
+              color: '#f1f5ff',
+              cursor: 'pointer'
             }}
           >
             <h2 className="text-xl font-semibold mb-4" style={{ color: '#f1f5ff' }}>🔔 Alert e Notifiche</h2>

@@ -39,6 +39,21 @@ export default function AlertsWidget({ therapistId }: AlertsWidgetProps) {
     }
   }
 
+  async function dismissAlert(alertId: string, e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    try {
+      // Rimuovi l'alert dall'UI immediatamente
+      setAlerts(prev => prev.filter(a => a.id !== alertId));
+
+      // Chiama API per dismissare (da implementare se serve persistenza)
+      // await fetch(`/api/dismiss-alert?alertId=${alertId}`, { method: 'POST' });
+    } catch (error) {
+      console.error('Errore dismissione alert:', error);
+    }
+  }
+
   const getAlertIcon = (type: string) => {
     switch (type) {
       case 'exercise': return '💪';
@@ -61,12 +76,12 @@ export default function AlertsWidget({ therapistId }: AlertsWidgetProps) {
 
   if (loading) {
     return (
-      <div className="bg-white border rounded-lg p-6">
+      <div style={{ background: '#0b0f1c', border: '1px solid #26304b' }} className="rounded-lg p-6">
         <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+          <div className="h-6 rounded w-1/3 mb-4" style={{ background: '#26304b' }}></div>
           <div className="space-y-3">
-            <div className="h-16 bg-gray-100 rounded"></div>
-            <div className="h-16 bg-gray-100 rounded"></div>
+            <div className="h-16 rounded" style={{ background: '#141a2c' }}></div>
+            <div className="h-16 rounded" style={{ background: '#141a2c' }}></div>
           </div>
         </div>
       </div>
@@ -77,9 +92,9 @@ export default function AlertsWidget({ therapistId }: AlertsWidgetProps) {
   const highAlerts = alerts.filter(a => a.severity === 'high').length;
 
   return (
-    <div className="bg-white border rounded-lg p-6 shadow-sm">
+    <div style={{ background: '#0b0f1c', border: '1px solid #26304b', color: '#f1f5ff' }} className="rounded-lg p-6 shadow-sm">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-bold text-lg flex items-center gap-2">
+        <h3 className="font-bold text-lg flex items-center gap-2" style={{ color: '#f1f5ff' }}>
           🚨 Alert e Notifiche
           {highAlerts > 0 && (
             <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
@@ -98,7 +113,7 @@ export default function AlertsWidget({ therapistId }: AlertsWidgetProps) {
       </div>
 
       {alerts.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
+        <div className="text-center py-8" style={{ color: '#a8b2d6' }}>
           <div className="text-4xl mb-2">✅</div>
           <p className="font-medium">Nessun alert attivo</p>
           <p className="text-sm">Tutti i pazienti sono monitorati correttamente</p>
@@ -106,31 +121,57 @@ export default function AlertsWidget({ therapistId }: AlertsWidgetProps) {
       ) : (
         <div className="space-y-3">
           {displayedAlerts.map(alert => (
-            <Link
+            <div
               key={alert.id}
-              href={`/app/therapist/pazienti/${alert.patientId}`}
-              className={`block border-l-4 p-4 rounded hover:shadow-md transition ${getSeverityColor(alert.severity)}`}
+              className={`block border-l-4 p-4 rounded hover:shadow-md transition relative ${getSeverityColor(alert.severity)}`}
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3 flex-1">
-                  <span className="text-2xl">{getAlertIcon(alert.type)}</span>
-                  <div>
-                    <div className="font-semibold">{alert.patientName}</div>
-                    <div className="text-sm mt-1">{alert.message}</div>
+              <Link
+                href={`/app/therapist/pazienti/${alert.patientId}`}
+                className="block"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3 flex-1">
+                    <span className="text-2xl">{getAlertIcon(alert.type)}</span>
+                    <div>
+                      <div className="font-semibold">{alert.patientName}</div>
+                      <div className="text-sm mt-1">{alert.message}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="text-xs text-gray-600 whitespace-nowrap">
+                      {alert.daysAgo} giorni fa
+                    </div>
+                    <button
+                      onClick={(e) => dismissAlert(alert.id, e)}
+                      className="p-1 hover:bg-gray-200 rounded transition-colors"
+                      title="Dismissi alert"
+                      aria-label="Dismissi alert"
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
-                <div className="text-xs text-gray-600 whitespace-nowrap">
-                  {alert.daysAgo} giorni fa
-                </div>
-              </div>
-            </Link>
+              </Link>
+            </div>
           ))}
         </div>
       )}
 
       {alerts.length > 0 && (
-        <div className="mt-4 pt-4 border-t text-sm text-gray-600">
-          <div className="flex items-center gap-4">
+        <div className="mt-4 pt-4 text-sm" style={{ borderTop: '1px solid #26304b', color: '#a8b2d6' }}>
+          <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-red-500 rounded"></div>
               <span>Urgente ({alerts.filter(a => a.severity === 'high').length})</span>
