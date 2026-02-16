@@ -151,7 +151,7 @@ export default function Page() {
         </div>
 
         {err && (
-          <div className="mb-6 p-4 rounded-lg text-red-100" style={{ 
+          <div className="mb-6 p-4 rounded-lg text-red-100" style={{
             backgroundColor: 'rgba(239, 68, 68, 0.2)',
             border: '1px solid rgba(239, 68, 68, 0.3)'
           }}>
@@ -159,132 +159,167 @@ export default function Page() {
           </div>
         )}
 
-        {/* Main Cards Grid 2x2 + Fatture */}
+        {/* Stats Section - Compact */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="p-4 rounded-xl text-white" style={{
+            background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+          }}>
+            <div className="text-sm opacity-80">Totale Pazienti</div>
+            <div className="text-3xl font-bold mt-1">{totalPatients}</div>
+          </div>
+          <div className="p-4 rounded-xl text-white" style={{
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+          }}>
+            <div className="text-sm opacity-80">Appuntamenti Settimana</div>
+            <div className="text-3xl font-bold mt-1">{weekAppts}</div>
+          </div>
+          <div className="p-4 rounded-xl text-white" style={{
+            background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+          }}>
+            <div className="text-sm opacity-80">Prossimi Appuntamenti</div>
+            <div className="text-3xl font-bold mt-1">{nextAppts.length}</div>
+          </div>
+        </div>
+
+        {/* Main Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Nuovo Paziente */}
-          <Link 
-            href="/app/therapist/pazienti/nuovo"
-            className="block p-8 rounded-2xl text-white text-center font-semibold text-xl transition-transform duration-200 hover:scale-105"
-            style={{
-              background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-              boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
-            }}
-          >
-            <div className="text-4xl mb-4">👤</div>
-            <div>Nuovo Paziente</div>
-          </Link>
+          {/* COLONNA 1 - Nuovo Paziente + I Tuoi Pazienti */}
+          <div className="space-y-6">
+            {/* Nuovo Paziente - Compact */}
+            <Link
+              href="/app/therapist/pazienti/nuovo"
+              className="block p-6 rounded-xl text-white text-center font-semibold text-lg transition-all duration-200 hover:scale-105 hover:shadow-2xl"
+              style={{
+                background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                boxShadow: '0 8px 20px rgba(0,0,0,0.2)'
+              }}
+            >
+              <div className="text-3xl mb-2">👤</div>
+              <div>Nuovo Paziente</div>
+            </Link>
 
-          {/* Nuovo Appuntamento */}
-          <button
-            onClick={() => setShowCalendarPicker(true)}
-            className="p-8 rounded-2xl text-white text-center font-semibold text-xl transition-transform duration-200 hover:scale-105 w-full"
-            style={{
-              background: 'linear-gradient(135deg, #10b981 0%, #047857 100%)',
-              boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
-              border: 'none'
-            }}
-          >
-            <div className="text-4xl mb-4">📅</div>
-            <div>Nuovo Appuntamento</div>
-          </button>
-
-          {/* CARD FATTURE */}
-          <Link
-            href="/app/therapist/fatture"
-            className="block p-8 rounded-2xl text-white text-center font-semibold text-xl transition-transform duration-200 hover:scale-105"
-            style={{
-              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-              boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
-            }}
-          >
-            <div className="text-4xl mb-4">💰</div>
-            <div>Gestione Fatture</div>
-          </Link>
-
-          {/* Prossimi Appuntamenti */}
-          <div 
-            className="p-8 rounded-2xl text-white"
-            style={{
-              background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-              boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
-              minHeight: '200px'
-            }}
-          >
-            <h2 className="text-xl font-semibold mb-4">📋 Prossimi Appuntamenti</h2>
-            <div className="space-y-3 max-h-40 overflow-y-auto">
-              {loading ? (
-                <div className="text-center py-4 text-purple-100">Caricamento...</div>
-              ) : nextAppts.length > 0 ? (
-                nextAppts.slice(0, 3).map(a => (
-                  <div key={a.id} className="bg-white/10 rounded-lg p-3">
-                    <div className="font-medium text-sm">
-                      {a.title}
-                      {(() => { const n = getPatientName(a.patients || null); return n ? ` · ${n}` : ''; })()}
+            {/* I Tuoi Pazienti */}
+            <Link
+              href="/app/therapist/pazienti"
+              className="block p-6 rounded-xl text-white transition-all duration-200 hover:scale-105 hover:shadow-2xl"
+              style={{
+                background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
+                boxShadow: '0 8px 20px rgba(0,0,0,0.2)',
+                minHeight: '250px',
+                textDecoration: 'none'
+              }}
+            >
+              <h2 className="text-lg font-semibold mb-3">👥 I Tuoi Pazienti</h2>
+              <div className="space-y-2">
+                {loading ? (
+                  <div className="text-center py-4 text-cyan-100">Caricamento...</div>
+                ) : allPatients.length > 0 ? (
+                  allPatients.slice(0, 4).map(p => (
+                    <div key={p.id} className="bg-white/10 rounded-lg p-2">
+                      <div className="font-medium text-sm">{p.display_name || 'Senza nome'}</div>
                     </div>
-                    <div className="text-xs text-purple-100 mt-1">
-                      {new Date(a.starts_at).toLocaleDateString('it-IT')} alle {new Date(a.starts_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-4 text-purple-100">Nessun appuntamento</div>
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-cyan-100">Nessun paziente</div>
+                )}
+              </div>
+              {allPatients.length > 4 && (
+                <div className="text-sm text-cyan-100 text-center mt-3">
+                  Vedi tutti ({allPatients.length}) →
+                </div>
               )}
-            </div>
-            {nextAppts.length > 3 && (
-              <Link href="/app/therapist/appuntamenti" className="text-sm text-purple-100 hover:text-white block text-center mt-3">
-                Vedi tutti ({nextAppts.length})
-              </Link>
-            )}
+            </Link>
           </div>
 
-          {/* I Tuoi Pazienti */}
-          <Link
-            href="/app/therapist/pazienti"
-            className="block p-8 rounded-2xl text-white"
-            style={{
-              background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
-              boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
-              minHeight: '200px',
-              textDecoration: 'none'
-            }}
-          >
-            <h2 className="text-xl font-semibold mb-4">👥 I Tuoi Pazienti</h2>
-            <div className="space-y-2">
-              {loading ? (
-                <div className="text-center py-4 text-cyan-100">Caricamento...</div>
-              ) : allPatients.length > 0 ? (
-                allPatients.slice(0, 4).map(p => (
-                  <div key={p.id} className="bg-white/10 rounded-lg p-2">
-                    <div className="font-medium text-sm">{p.display_name || 'Senza nome'}</div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-4 text-cyan-100">Nessun paziente</div>
+          {/* COLONNA 2 - Nuovo Appuntamento + Prossimi Appuntamenti */}
+          <div className="space-y-6">
+            {/* Nuovo Appuntamento - Compact */}
+            <button
+              onClick={() => setShowCalendarPicker(true)}
+              className="p-6 rounded-xl text-white text-center font-semibold text-lg transition-all duration-200 hover:scale-105 hover:shadow-2xl w-full"
+              style={{
+                background: 'linear-gradient(135deg, #10b981 0%, #047857 100%)',
+                boxShadow: '0 8px 20px rgba(0,0,0,0.2)',
+                border: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              <div className="text-3xl mb-2">📅</div>
+              <div>Nuovo Appuntamento</div>
+            </button>
+
+            {/* Prossimi Appuntamenti */}
+            <div
+              className="p-6 rounded-xl text-white transition-all duration-200 hover:scale-105 hover:shadow-2xl"
+              style={{
+                background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                boxShadow: '0 8px 20px rgba(0,0,0,0.2)',
+                minHeight: '250px'
+              }}
+            >
+              <h2 className="text-lg font-semibold mb-3">📋 Prossimi Appuntamenti</h2>
+              <div className="space-y-2 max-h-44 overflow-y-auto">
+                {loading ? (
+                  <div className="text-center py-4 text-purple-100">Caricamento...</div>
+                ) : nextAppts.length > 0 ? (
+                  nextAppts.slice(0, 3).map(a => (
+                    <div key={a.id} className="bg-white/10 rounded-lg p-2">
+                      <div className="font-medium text-sm">
+                        {a.title}
+                        {(() => { const n = getPatientName(a.patients || null); return n ? ` · ${n}` : ''; })()}
+                      </div>
+                      <div className="text-xs text-purple-100 mt-1">
+                        {new Date(a.starts_at).toLocaleDateString('it-IT')} alle {new Date(a.starts_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-purple-100">Nessun appuntamento</div>
+                )}
+              </div>
+              {nextAppts.length > 3 && (
+                <Link href="/app/therapist/appuntamenti" className="text-sm text-purple-100 hover:text-white block text-center mt-3">
+                  Vedi tutti ({nextAppts.length})
+                </Link>
               )}
             </div>
-            {allPatients.length > 4 && (
-              <div className="text-sm text-cyan-100 text-center mt-3">
-                Vedi tutti ({allPatients.length}) →
-              </div>
-            )}
-          </Link>
+          </div>
 
-          {/* Alert e Notifiche */}
-          <div 
-            className="p-8 rounded-2xl text-white"
-            style={{
-              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-              boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
-              minHeight: '200px'
-            }}
-          >
-            <h2 className="text-xl font-semibold mb-4">🔔 Alert e Notifiche</h2>
-            <div className="space-y-3">
-              {loading ? (
-                <div className="text-center py-4 text-red-100">Caricamento...</div>
-              ) : (
-                <AlertsWidgetWrapper />
-              )}
+          {/* COLONNA 3 - Gestione Fatture + Alert e Notifiche */}
+          <div className="space-y-6">
+            {/* CARD FATTURE - Compact */}
+            <Link
+              href="/app/therapist/fatture"
+              className="block p-6 rounded-xl text-white text-center font-semibold text-lg transition-all duration-200 hover:scale-105 hover:shadow-2xl"
+              style={{
+                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                boxShadow: '0 8px 20px rgba(0,0,0,0.2)'
+              }}
+            >
+              <div className="text-3xl mb-2">💰</div>
+              <div>Gestione Fatture</div>
+            </Link>
+
+            {/* Alert e Notifiche */}
+            <div
+              className="p-6 rounded-xl text-white transition-all duration-200 hover:scale-105 hover:shadow-2xl"
+              style={{
+                background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                boxShadow: '0 8px 20px rgba(0,0,0,0.2)',
+                minHeight: '250px'
+              }}
+            >
+              <h2 className="text-lg font-semibold mb-3">🔔 Alert e Notifiche</h2>
+              <div className="space-y-2">
+                {loading ? (
+                  <div className="text-center py-4 text-red-100">Caricamento...</div>
+                ) : (
+                  <AlertsWidgetWrapper />
+                )}
+              </div>
             </div>
           </div>
         </div>
