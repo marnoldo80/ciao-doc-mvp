@@ -271,7 +271,16 @@ function SeduteTab({ id, sessionNotes, onOpenCalendar, loadData }: {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {allAppointments.map(apt => {
               const isPast = new Date(apt.starts_at) < new Date();
-              const hasNote = sessionNotes.some(n => n.session_date?.startsWith(apt.starts_at?.substring(0, 10)));
+              const aptDateStr = apt.starts_at?.substring(0, 10);
+              // Trova la nota già salvata per questo appuntamento (per data)
+              const existingNote = sessionNotes.find(n => n.session_date?.startsWith(aptDateStr));
+              const hasNote = !!existingNote;
+
+              // Destinazione bottone: se ha nota → apri dettaglio; se no → crea nuova seduta
+              const buttonDest = hasNote
+                ? `/app/therapist/sedute/${existingNote!.id}`
+                : `/app/therapist/sedute/nuovo?patientId=${id}&appointmentId=${apt.id}`;
+
               return (
                 <div
                   key={apt.id}
@@ -301,9 +310,9 @@ function SeduteTab({ id, sessionNotes, onOpenCalendar, loadData }: {
                     {apt.location && <div style={{ fontSize: '12px', color: '#a8b2d6', marginTop: '3px' }}>📍 {apt.location}</div>}
                   </div>
 
-                  {/* Bottone Entra / Apri seduta */}
+                  {/* Bottone: apri nota esistente o crea nuova seduta */}
                   <button
-                    onClick={() => router.push(`/app/therapist/sedute/nuovo?patientId=${id}&appointmentId=${apt.id}`)}
+                    onClick={() => router.push(buttonDest)}
                     style={{
                       background: isPast ? '#1a2236' : '#7aa2ff',
                       color: isPast ? '#7aa2ff' : '#0b1022',
@@ -322,7 +331,7 @@ function SeduteTab({ id, sessionNotes, onOpenCalendar, loadData }: {
                     onMouseEnter={e => { e.currentTarget.style.background = isPast ? '#243050' : '#9ab8ff'; }}
                     onMouseLeave={e => { e.currentTarget.style.background = isPast ? '#1a2236' : '#7aa2ff'; }}
                   >
-                    {isPast ? '📝 Apri seduta' : '🎙️ Entra nell\'appuntamento'}
+                    {!isPast ? '🎙️ Entra nell\'appuntamento' : hasNote ? '📖 Vedi seduta' : '📝 Crea nota seduta'}
                   </button>
                 </div>
               );
@@ -483,7 +492,7 @@ export default function PatientPage() {
         setEsercizi(planData.esercizi || []);
       }
 
-      const { data: notesData } = await supabase.from('session_notes').select('*').eq('patient_id', id).order('session_date', { ascending: false }).limit(5);
+      const { data: notesData } = await supabase.from('session_notes').select('*').eq('patient_id', id).order('session_date', { ascending: false });
       setSessionNotes(notesData || []);
 
       const { data: gad7Data } = await supabase.from('gad7_results').select('id, total, severity, created_at').eq('patient_id', id).order('created_at', { ascending: false });
