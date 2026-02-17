@@ -4,9 +4,13 @@ import { useState, useRef } from 'react';
 type AudioRecorderProps = {
   onTranscriptComplete: (transcript: string) => void;
   onSummaryComplete: (summary: string) => void;
+  patientId?: string; // opzionale: per passare orientamento al riassunto
 };
 
-export default function AudioRecorder({ onTranscriptComplete, onSummaryComplete }: AudioRecorderProps) {
+const MAX_RECORDING_MINUTES = 120; // limite hard: 2 ore
+const WARN_RECORDING_MINUTES = 90; // avviso a 90 minuti
+
+export default function AudioRecorder({ onTranscriptComplete, onSummaryComplete, patientId }: AudioRecorderProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
@@ -21,7 +25,7 @@ export default function AudioRecorder({ onTranscriptComplete, onSummaryComplete 
     try {
       setError(null);
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
+
       const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
@@ -42,9 +46,15 @@ export default function AudioRecorder({ onTranscriptComplete, onSummaryComplete 
       setIsRecording(true);
       setRecordingTime(0);
 
-      // Timer
       timerRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
+        setRecordingTime(prev => {
+          const next = prev + 1;
+          // Limite hard: ferma automaticamente dopo 2 ore
+          if (next >= MAX_RECORDING_MINUTES * 60) {
+            stopRecording();
+          }
+          return next;
+        });
       }, 1000);
 
     } catch (err: any) {
@@ -70,7 +80,6 @@ export default function AudioRecorder({ onTranscriptComplete, onSummaryComplete 
     setError(null);
 
     try {
-      // Step 1: Trascrizione con Deepgram
       const formData = new FormData();
       formData.append('audio', audioBlob, 'recording.webm');
 
@@ -86,19 +95,9 @@ export default function AudioRecorder({ onTranscriptComplete, onSummaryComplete 
       const { transcript } = await transcribeRes.json();
       onTranscriptComplete(transcript);
 
-      // Step 2: Riassunto con Groq
-      const summaryRes = await fetch('/api/ai-summary', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transcript }),
-      });
-
-      if (!summaryRes.ok) {
-        throw new Error('Errore generazione riassunto');
-      }
-
-      const { summary } = await summaryRes.json();
-      onSummaryComplete(summary);
+      // Il riassunto viene generato dalla pagina padre (sedute/nuovo) che ha già patientId
+      // Questo componente notifica solo il completamento
+      onSummaryComplete('');
 
     } catch (err: any) {
       setError(err.message);
@@ -109,10 +108,18 @@ export default function AudioRecorder({ onTranscriptComplete, onSummaryComplete 
   };
 
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    if (h > 0) {
+      return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+    return `${m}:${s.toString().padStart(2, '0')}`;
   };
+
+  const recordingMinutes = Math.floor(recordingTime / 60);
+  const isLong = recordingMinutes >= WARN_RECORDING_MINUTES;
+  const timerColor = isLong ? '#f59e0b' : '#ef4444'; // giallo se lungo, rosso normale
 
   return (
     <div style={{ background: '#0b0f1c', border: '1px solid #26304b', borderRadius: '12px', padding: '20px' }}>
@@ -142,8 +149,8 @@ export default function AudioRecorder({ onTranscriptComplete, onSummaryComplete 
               boxShadow: '0 4px 16px rgba(239,68,68,0.4)',
               transition: 'all 0.2s',
             }}
-            onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.03)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(239,68,68,0.5)'; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(239,68,68,0.4)'; }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.03)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
           >
             🎙️ Avvia Registrazione
           </button>
@@ -172,10 +179,17 @@ export default function AudioRecorder({ onTranscriptComplete, onSummaryComplete 
               ⏹️ Ferma Registrazione
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ width: '10px', height: '10px', background: '#ef4444', borderRadius: '50%', animation: 'pulse 1s infinite' }}></div>
-              <span style={{ fontFamily: 'monospace', fontSize: '18px', fontWeight: 700, color: '#ef4444' }}>{formatTime(recordingTime)}</span>
+              <div style={{ width: '10px', height: '10px', background: timerColor, borderRadius: '50%', animation: 'pulse 1s infinite' }}></div>
+              <span style={{ fontFamily: 'monospace', fontSize: '18px', fontWeight: 700, color: timerColor }}>
+                {formatTime(recordingTime)}
+              </span>
               <span style={{ fontSize: '13px', color: '#a8b2d6' }}>REC</span>
             </div>
+            {isLong && (
+              <span style={{ fontSize: '12px', color: '#f59e0b', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '6px', padding: '3px 8px' }}>
+                ⚠️ Registrazione molto lunga
+              </span>
+            )}
           </>
         )}
 
@@ -216,7 +230,7 @@ export default function AudioRecorder({ onTranscriptComplete, onSummaryComplete 
         {isProcessing && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#7aa2ff' }}>
             <div style={{ width: '20px', height: '20px', border: '2px solid #7aa2ff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
-            <span style={{ fontWeight: 500, fontSize: '14px' }}>Elaborazione in corso...</span>
+            <span style={{ fontWeight: 500, fontSize: '14px' }}>Trascrizione in corso...</span>
           </div>
         )}
       </div>
