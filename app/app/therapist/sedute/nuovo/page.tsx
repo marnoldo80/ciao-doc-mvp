@@ -16,6 +16,7 @@ function NuovaNotaForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const patientIdFromUrl = searchParams?.get('patientId');
+  const appointmentIdFromUrl = searchParams?.get('appointmentId');
 
   const [patients, setPatients] = useState<Patient[]>([]);
   const [patientId, setPatientId] = useState(patientIdFromUrl || '');
@@ -52,7 +53,25 @@ function NuovaNotaForm() {
 
   useEffect(() => {
     loadPatients();
+    if (appointmentIdFromUrl) {
+      loadAppointmentDate(appointmentIdFromUrl);
+    }
   }, []);
+
+  async function loadAppointmentDate(appointmentId: string) {
+    try {
+      const { data } = await supabase
+        .from('appointments')
+        .select('starts_at')
+        .eq('id', appointmentId)
+        .single();
+      if (data?.starts_at) {
+        setSessionDate(new Date(data.starts_at).toISOString().split('T')[0]);
+      }
+    } catch (e) {
+      console.error('Errore caricamento data appuntamento:', e);
+    }
+  }
 
   async function loadPatients() {
     try {
@@ -272,38 +291,25 @@ function NuovaNotaForm() {
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <Link 
-            href="/app/therapist"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors duration-200"
-            style={{ 
-              color: 'white', 
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
+        <div className="flex items-center gap-3 flex-wrap">
+          <Link
+            href={patientId ? `/app/therapist/pazienti/${patientId}` : '/app/therapist/pazienti'}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200"
+            style={{
+              color: '#a8b2d6',
               textDecoration: 'none',
-              backgroundColor: 'rgba(255,255,255,0.1)',
-              border: '1px solid rgba(255,255,255,0.2)'
+              background: '#141a2c',
+              border: '1px solid #26304b',
             }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#7aa2ff'; e.currentTarget.style.color = '#f1f5ff'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#26304b'; e.currentTarget.style.color = '#a8b2d6'; }}
           >
-            ← Dashboard
+            ← Scheda Paziente
           </Link>
-          {patientId && (
-            <Link 
-              href={`/app/therapist/pazienti/${patientId}`}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors duration-200"
-              style={{ 
-                color: 'white', 
-                textDecoration: 'none',
-                backgroundColor: 'rgba(255,255,255,0.1)',
-                border: '1px solid rgba(255,255,255,0.2)'
-              }}
-            >
-              ← Scheda Paziente
-            </Link>
-          )}
         </div>
-        
-        <h1 className="text-3xl font-bold" style={{ color: 'white' }}>
-          Nuova Seduta {selectedPatient ? `- ${selectedPatient.display_name}` : ''}
+        <h1 className="text-2xl font-bold" style={{ color: '#f1f5ff' }}>
+          🎙️ Seduta {selectedPatient ? `· ${selectedPatient.display_name}` : ''}
         </h1>
       </div>
 
@@ -368,12 +374,9 @@ function NuovaNotaForm() {
         background: 'rgba(255,255,255,0.05)',
         border: '1px solid rgba(255,255,255,0.1)'
       }}>
-        <h3 className="font-bold text-lg mb-4 flex items-center gap-2" style={{ color: 'white' }}>
-          🎙️ Registrazione Audio Seduta
-        </h3>
-        <AudioRecorder 
-          onTranscriptComplete={handleTranscriptComplete} 
-          onSummaryComplete={() => {}} 
+        <AudioRecorder
+          onTranscriptComplete={handleTranscriptComplete}
+          onSummaryComplete={() => {}}
         />
       </div>
 

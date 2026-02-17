@@ -115,24 +115,37 @@ export default function AudioRecorder({ onTranscriptComplete, onSummaryComplete 
   };
 
   return (
-    <div className="border rounded-lg p-6 bg-gradient-to-br from-purple-50 to-blue-50">
-      <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-        🎙️ Registrazione Audio Seduta
-      </h3>
+    <div style={{ background: '#0b0f1c', border: '1px solid #26304b', borderRadius: '12px', padding: '20px' }}>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded text-sm">
+        <div style={{ marginBottom: '12px', padding: '10px 14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', borderRadius: '8px', fontSize: '14px' }}>
           {error}
         </div>
       )}
 
-      <div className="flex items-center gap-4">
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
         {!isRecording && !audioBlob && (
           <button
             onClick={startRecording}
-            className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 font-medium flex items-center gap-2"
+            style={{
+              background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '10px',
+              padding: '12px 24px',
+              fontWeight: 700,
+              fontSize: '15px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 4px 16px rgba(239,68,68,0.4)',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.03)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(239,68,68,0.5)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(239,68,68,0.4)'; }}
           >
-            ⏺️ Avvia Registrazione
+            🎙️ Avvia Registrazione
           </button>
         )}
 
@@ -140,31 +153,60 @@ export default function AudioRecorder({ onTranscriptComplete, onSummaryComplete 
           <>
             <button
               onClick={stopRecording}
-              className="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 font-medium flex items-center gap-2"
+              style={{
+                background: '#1a2236',
+                color: '#f1f5ff',
+                border: '1px solid #7aa2ff',
+                borderRadius: '10px',
+                padding: '12px 24px',
+                fontWeight: 600,
+                fontSize: '15px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#243050'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#1a2236'; }}
             >
               ⏹️ Ferma Registrazione
             </button>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse"></div>
-              <span className="font-mono text-lg font-semibold">{formatTime(recordingTime)}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ width: '10px', height: '10px', background: '#ef4444', borderRadius: '50%', animation: 'pulse 1s infinite' }}></div>
+              <span style={{ fontFamily: 'monospace', fontSize: '18px', fontWeight: 700, color: '#ef4444' }}>{formatTime(recordingTime)}</span>
+              <span style={{ fontSize: '13px', color: '#a8b2d6' }}>REC</span>
             </div>
           </>
         )}
 
         {audioBlob && !isProcessing && (
-          <div className="flex gap-3">
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <button
               onClick={processAudio}
-              className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-medium flex items-center gap-2"
+              style={{
+                background: 'linear-gradient(135deg, #7aa2ff, #9333ea)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '10px',
+                padding: '12px 24px',
+                fontWeight: 700,
+                fontSize: '15px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 16px rgba(122,162,255,0.3)',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.opacity = '0.9'; }}
+              onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
             >
-              ✨ Trascrivi e Genera Riassunto
+              ✨ Trascrivi e Genera IA
             </button>
             <button
-              onClick={() => {
-                setAudioBlob(null);
-                setRecordingTime(0);
-              }}
-              className="bg-gray-400 text-white px-4 py-3 rounded-lg hover:bg-gray-500"
+              onClick={() => { setAudioBlob(null); setRecordingTime(0); }}
+              style={{ background: '#141a2c', color: '#a8b2d6', border: '1px solid #26304b', borderRadius: '10px', padding: '12px 18px', fontWeight: 500, fontSize: '14px', cursor: 'pointer' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#7aa2ff'; e.currentTarget.style.color = '#f1f5ff'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = '#26304b'; e.currentTarget.style.color = '#a8b2d6'; }}
             >
               🔄 Nuova Registrazione
             </button>
@@ -172,18 +214,23 @@ export default function AudioRecorder({ onTranscriptComplete, onSummaryComplete 
         )}
 
         {isProcessing && (
-          <div className="flex items-center gap-3 text-blue-600">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-            <span className="font-medium">Elaborazione in corso...</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#7aa2ff' }}>
+            <div style={{ width: '20px', height: '20px', border: '2px solid #7aa2ff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
+            <span style={{ fontWeight: 500, fontSize: '14px' }}>Elaborazione in corso...</span>
           </div>
         )}
       </div>
 
       {audioBlob && (
-        <div className="mt-4 text-sm text-gray-600">
+        <div style={{ marginTop: '12px', fontSize: '13px', color: '#22c55e' }}>
           ✅ Registrazione completata ({formatTime(recordingTime)})
         </div>
       )}
+
+      <style>{`
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        @keyframes spin { to{transform:rotate(360deg)} }
+      `}</style>
     </div>
   );
 }

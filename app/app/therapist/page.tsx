@@ -37,6 +37,12 @@ export default function Page() {
   const [showCalendarPicker, setShowCalendarPicker] = useState(false);
   const [showQuickModal, setShowQuickModal] = useState(false);
   const [selectedDateTime, setSelectedDateTime] = useState<string | null>(null);
+  const [hoverAppt, setHoverAppt] = useState(false);
+  const [hoverProssimi, setHoverProssimi] = useState(false);
+  const [hoverAlerts, setHoverAlerts] = useState(false);
+  const [hoverNuovoPaziente, setHoverNuovoPaziente] = useState(false);
+  const [hoverFatture, setHoverFatture] = useState(false);
+  const [hoverPazienti, setHoverPazienti] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -204,11 +210,13 @@ export default function Page() {
           {/* Nuovo Paziente - Dark theme */}
           <Link
             href="/app/therapist/pazienti/nuovo"
+            onMouseEnter={() => setHoverNuovoPaziente(true)}
+            onMouseLeave={() => setHoverNuovoPaziente(false)}
             className="block p-8 rounded-2xl text-center font-semibold text-xl transition-all duration-300 hover:scale-105 hover:-translate-y-1 animate-fadeIn"
             style={{
               background: '#141a2c',
-              border: '2px solid #26304b',
-              boxShadow: '0 12px 32px rgba(0,0,0,0.3)',
+              border: hoverNuovoPaziente ? '2px solid #7aa2ff' : '2px solid #26304b',
+              boxShadow: hoverNuovoPaziente ? '0 16px 40px rgba(122, 162, 255, 0.2)' : '0 12px 32px rgba(0,0,0,0.3)',
               animationDelay: '100ms',
               color: '#f1f5ff'
             }}
@@ -221,11 +229,13 @@ export default function Page() {
           {/* Nuovo Appuntamento - Dark theme */}
           <button
             onClick={() => setShowCalendarPicker(true)}
+            onMouseEnter={() => setHoverAppt(true)}
+            onMouseLeave={() => setHoverAppt(false)}
             className="p-8 rounded-2xl text-center font-semibold text-xl transition-all duration-300 hover:scale-105 hover:-translate-y-1 w-full animate-fadeIn"
             style={{
               background: '#141a2c',
-              border: '2px solid #26304b',
-              boxShadow: '0 12px 32px rgba(0,0,0,0.3)',
+              border: hoverAppt ? '2px solid #7aa2ff' : '2px solid #26304b',
+              boxShadow: hoverAppt ? '0 16px 40px rgba(122, 162, 255, 0.2)' : '0 12px 32px rgba(0,0,0,0.3)',
               animationDelay: '200ms',
               color: '#f1f5ff',
               cursor: 'pointer'
@@ -239,11 +249,13 @@ export default function Page() {
           {/* Fatture - Dark theme */}
           <Link
             href="/app/therapist/fatture"
+            onMouseEnter={() => setHoverFatture(true)}
+            onMouseLeave={() => setHoverFatture(false)}
             className="block p-8 rounded-2xl text-center font-semibold text-xl transition-all duration-300 hover:scale-105 hover:-translate-y-1 animate-fadeIn"
             style={{
               background: '#141a2c',
-              border: '2px solid #26304b',
-              boxShadow: '0 12px 32px rgba(0,0,0,0.3)',
+              border: hoverFatture ? '2px solid #7aa2ff' : '2px solid #26304b',
+              boxShadow: hoverFatture ? '0 16px 40px rgba(122, 162, 255, 0.2)' : '0 12px 32px rgba(0,0,0,0.3)',
               animationDelay: '300ms',
               color: '#f1f5ff'
             }}
@@ -253,16 +265,59 @@ export default function Page() {
             <div className="text-sm" style={{ color: '#a8b2d6', opacity: 0.8 }}>Gestisci le tue fatture</div>
           </Link>
 
+          {/* I Tuoi Pazienti - Dark theme */}
+          <Link
+            href="/app/therapist/pazienti"
+            onMouseEnter={() => setHoverPazienti(true)}
+            onMouseLeave={() => setHoverPazienti(false)}
+            className="block p-8 rounded-2xl transition-all duration-300 hover:scale-105 hover:-translate-y-1 animate-fadeIn"
+            style={{
+              background: '#141a2c',
+              border: hoverPazienti ? '2px solid #7aa2ff' : '2px solid #26304b',
+              boxShadow: hoverPazienti ? '0 16px 40px rgba(122, 162, 255, 0.2)' : '0 12px 32px rgba(0,0,0,0.3)',
+              minHeight: '240px',
+              textDecoration: 'none',
+              animationDelay: '400ms',
+              color: '#f1f5ff'
+            }}
+          >
+            <h2 className="text-xl font-semibold mb-4" style={{ color: '#f1f5ff' }}>👥 I Tuoi Pazienti</h2>
+            <div className="space-y-2">
+              {loading ? (
+                <div className="text-center py-4" style={{ color: '#a8b2d6' }}>Caricamento...</div>
+              ) : allPatients.length > 0 ? (
+                allPatients.slice(0, 4).map((p, idx) => (
+                  <div key={p.id} className="rounded-lg p-2 transition-colors" style={{
+                    background: '#0b0f1c',
+                    border: '1px solid #26304b',
+                    animation: `fadeIn 0.3s ease-out ${idx * 100}ms backwards`
+                  }}>
+                    <div className="font-medium text-sm" style={{ color: '#f1f5ff' }}>{p.display_name || 'Senza nome'}</div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-4" style={{ color: '#a8b2d6' }}>Nessun paziente registrato</div>
+              )}
+            </div>
+            {allPatients.length > 4 && (
+              <div className="text-sm text-center mt-3" style={{ color: '#7aa2ff' }}>
+                Vedi tutti ({allPatients.length}) →
+              </div>
+            )}
+          </Link>
+
           {/* Prossimi Appuntamenti - Dark theme */}
           <div
             onClick={() => router.push('/app/therapist/appuntamenti')}
+            onMouseEnter={() => setHoverProssimi(true)}
+            onMouseLeave={() => setHoverProssimi(false)}
             className="p-8 rounded-2xl transition-all duration-300 hover:scale-105 hover:-translate-y-1 animate-fadeIn"
             style={{
               background: '#141a2c',
-              border: '2px solid #26304b',
-              boxShadow: '0 12px 32px rgba(0,0,0,0.3)',
+              border: hoverProssimi ? '2px solid #7aa2ff' : '2px solid #26304b',
+              boxShadow: hoverProssimi ? '0 16px 40px rgba(122, 162, 255, 0.2)' : '0 12px 32px rgba(0,0,0,0.3)',
               minHeight: '240px',
-              animationDelay: '400ms',
+              animationDelay: '500ms',
               color: '#f1f5ff',
               cursor: 'pointer'
             }}
@@ -298,53 +353,16 @@ export default function Page() {
             )}
           </div>
 
-          {/* I Tuoi Pazienti - Dark theme */}
-          <Link
-            href="/app/therapist/pazienti"
-            className="block p-8 rounded-2xl transition-all duration-300 hover:scale-105 hover:-translate-y-1 animate-fadeIn"
-            style={{
-              background: '#141a2c',
-              border: '2px solid #26304b',
-              boxShadow: '0 12px 32px rgba(0,0,0,0.3)',
-              minHeight: '240px',
-              textDecoration: 'none',
-              animationDelay: '500ms',
-              color: '#f1f5ff'
-            }}
-          >
-            <h2 className="text-xl font-semibold mb-4" style={{ color: '#f1f5ff' }}>👥 I Tuoi Pazienti</h2>
-            <div className="space-y-2">
-              {loading ? (
-                <div className="text-center py-4" style={{ color: '#a8b2d6' }}>Caricamento...</div>
-              ) : allPatients.length > 0 ? (
-                allPatients.slice(0, 4).map((p, idx) => (
-                  <div key={p.id} className="rounded-lg p-2 transition-colors" style={{
-                    background: '#0b0f1c',
-                    border: '1px solid #26304b',
-                    animation: `fadeIn 0.3s ease-out ${idx * 100}ms backwards`
-                  }}>
-                    <div className="font-medium text-sm" style={{ color: '#f1f5ff' }}>{p.display_name || 'Senza nome'}</div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-4" style={{ color: '#a8b2d6' }}>Nessun paziente registrato</div>
-              )}
-            </div>
-            {allPatients.length > 4 && (
-              <div className="text-sm text-center mt-3" style={{ color: '#7aa2ff' }}>
-                Vedi tutti ({allPatients.length}) →
-              </div>
-            )}
-          </Link>
-
           {/* Alert e Notifiche - Dark theme */}
           <div
             onClick={() => router.push('/app/therapist/alerts')}
+            onMouseEnter={() => setHoverAlerts(true)}
+            onMouseLeave={() => setHoverAlerts(false)}
             className="p-8 rounded-2xl transition-all duration-300 hover:scale-105 hover:-translate-y-1 animate-fadeIn"
             style={{
               background: '#141a2c',
-              border: '2px solid #26304b',
-              boxShadow: '0 12px 32px rgba(0,0,0,0.3)',
+              border: hoverAlerts ? '2px solid #7aa2ff' : '2px solid #26304b',
+              boxShadow: hoverAlerts ? '0 16px 40px rgba(122, 162, 255, 0.2)' : '0 12px 32px rgba(0,0,0,0.3)',
               minHeight: '240px',
               animationDelay: '600ms',
               color: '#f1f5ff',
@@ -412,20 +430,6 @@ export default function Page() {
           background: #7aa2ff;
         }
 
-        /* Hover effects per le card principali */
-        a[href="/app/therapist/pazienti/nuovo"]:hover,
-        button:hover,
-        a[href="/app/therapist/fatture"]:hover {
-          border-color: #7aa2ff !important;
-          box-shadow: 0 16px 40px rgba(122, 162, 255, 0.2) !important;
-        }
-
-        /* Hover effects per le card informative */
-        a[href="/app/therapist/pazienti"]:hover,
-        div[style*="minHeight: 240px"]:hover {
-          border-color: #7aa2ff !important;
-          box-shadow: 0 16px 40px rgba(122, 162, 255, 0.2) !important;
-        }
       `}</style>
     </div>
   );

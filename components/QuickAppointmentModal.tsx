@@ -16,15 +16,36 @@ type QuickAppointmentModalProps = {
 
 type Patient = { id: string; display_name: string | null };
 
-export default function QuickAppointmentModal({ 
-  isOpen, 
-  onClose, 
+const inputStyle = {
+  width: '100%',
+  background: '#0b0f1c',
+  border: '1px solid #26304b',
+  borderRadius: '8px',
+  padding: '10px 12px',
+  color: '#f1f5ff',
+  fontSize: '14px',
+  outline: 'none',
+};
+
+const labelStyle = {
+  display: 'block',
+  fontWeight: '500' as const,
+  marginBottom: '6px',
+  color: '#a8b2d6',
+  fontSize: '14px',
+};
+
+export default function QuickAppointmentModal({
+  isOpen,
+  onClose,
   prefilledDateTime,
-  onSuccess 
+  onSuccess
 }: QuickAppointmentModalProps) {
   const [title, setTitle] = useState('Seduta terapeutica');
   const [patientId, setPatientId] = useState('');
-  const [startsAt, setStartsAt] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [startHour, setStartHour] = useState('08');
+  const [startMinute, setStartMinute] = useState('00');
   const [duration, setDuration] = useState(60);
   const [location, setLocation] = useState('');
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -34,7 +55,21 @@ export default function QuickAppointmentModal({
     if (isOpen) {
       loadPatients();
       if (prefilledDateTime) {
-        setStartsAt(new Date(prefilledDateTime).toISOString().slice(0, 16));
+        const dt = new Date(prefilledDateTime);
+        // Data in formato YYYY-MM-DD per input date
+        const yyyy = dt.getFullYear();
+        const mm = String(dt.getMonth() + 1).padStart(2, '0');
+        const dd = String(dt.getDate()).padStart(2, '0');
+        setStartDate(`${yyyy}-${mm}-${dd}`);
+        // Ora e minuti dallo slot cliccato
+        setStartHour(String(dt.getHours()).padStart(2, '0'));
+        // Arrotonda i minuti al quarto d'ora più vicino
+        const mins = dt.getMinutes();
+        if (mins < 8) setStartMinute('00');
+        else if (mins < 23) setStartMinute('15');
+        else if (mins < 38) setStartMinute('30');
+        else if (mins < 53) setStartMinute('45');
+        else setStartMinute('00');
       }
     }
   }, [isOpen, prefilledDateTime]);
@@ -43,13 +78,11 @@ export default function QuickAppointmentModal({
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-
       const { data } = await supabase
         .from('patients')
         .select('id, display_name')
         .eq('therapist_user_id', user.id)
         .order('display_name');
-
       setPatients(data || []);
     } catch (e) {
       console.error('Errore caricamento pazienti:', e);
@@ -62,7 +95,7 @@ export default function QuickAppointmentModal({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Non autenticato');
 
-      const start = new Date(startsAt);
+      const start = new Date(`${startDate}T${startHour}:${startMinute}:00`);
       const end = new Date(start.getTime() + duration * 60000);
 
       const { data: newAppointment, error } = await supabase.from('appointments').insert({
@@ -77,7 +110,6 @@ export default function QuickAppointmentModal({
 
       if (error) throw error;
 
-      // Invia email conferma al paziente se presente
       if (patientId && newAppointment) {
         try {
           await fetch('/api/send-appointment-confirmation', {
@@ -94,7 +126,6 @@ export default function QuickAppointmentModal({
       onSuccess();
       onClose();
       resetForm();
-
     } catch (error: any) {
       alert('Errore: ' + error.message);
     } finally {
@@ -105,46 +136,67 @@ export default function QuickAppointmentModal({
   function resetForm() {
     setTitle('Seduta terapeutica');
     setPatientId('');
-    setStartsAt('');
+    setStartDate('');
+    setStartHour('08');
+    setStartMinute('00');
     setDuration(60);
     setLocation('');
   }
 
   if (!isOpen) return null;
 
+  const hours = Array.from({ length: 16 }, (_, i) => String(i + 7).padStart(2, '0')); // 07-22
+  const minutes = ['00', '15', '30', '45'];
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-        <div className="bg-blue-600 text-white p-6 rounded-t-lg">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold">⚡ Nuovo Appuntamento</h2>
-            <button 
-              onClick={onClose} 
-              className="text-white hover:text-gray-200 text-2xl font-bold"
-            >
-              ×
-            </button>
-          </div>
+    <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+      <div className="rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto" style={{
+        background: '#0b0f1c',
+        border: '2px solid #26304b',
+        boxShadow: '0 24px 64px rgba(0,0,0,0.5)'
+      }}>
+        {/* Header */}
+        <div className="p-6 rounded-t-2xl flex items-center justify-between" style={{
+          background: '#141a2c',
+          borderBottom: '2px solid #26304b'
+        }}>
+          <h2 className="text-2xl font-bold" style={{ color: '#f1f5ff' }}>⚡ Nuovo Appuntamento</h2>
+          <button
+            onClick={onClose}
+            className="text-2xl font-bold leading-none transition-colors"
+            style={{ color: '#a8b2d6' }}
+            onMouseEnter={e => (e.currentTarget.style.color = '#f1f5ff')}
+            onMouseLeave={e => (e.currentTarget.style.color = '#a8b2d6')}
+          >
+            ×
+          </button>
         </div>
 
         <div className="p-6 space-y-4">
+
+          {/* Titolo */}
           <div>
-            <label className="block font-medium mb-2">Titolo *</label>
+            <label style={labelStyle}>Titolo *</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full border rounded px-3 py-2"
+              style={inputStyle}
+              onFocus={e => (e.currentTarget.style.borderColor = '#7aa2ff')}
+              onBlur={e => (e.currentTarget.style.borderColor = '#26304b')}
               required
             />
           </div>
 
+          {/* Paziente */}
           <div>
-            <label className="block font-medium mb-2">Paziente</label>
+            <label style={labelStyle}>Paziente</label>
             <select
               value={patientId}
               onChange={(e) => setPatientId(e.target.value)}
-              className="w-full border rounded px-3 py-2"
+              style={inputStyle}
+              onFocus={e => (e.currentTarget.style.borderColor = '#7aa2ff')}
+              onBlur={e => (e.currentTarget.style.borderColor = '#26304b')}
             >
               <option value="">Nessun paziente</option>
               {patients.map((p) => (
@@ -155,23 +207,58 @@ export default function QuickAppointmentModal({
             </select>
           </div>
 
+          {/* Data */}
           <div>
-            <label className="block font-medium mb-2">Data e ora inizio *</label>
+            <label style={labelStyle}>Data inizio *</label>
             <input
-              type="datetime-local"
-              value={startsAt}
-              onChange={(e) => setStartsAt(e.target.value)}
-              className="w-full border rounded px-3 py-2"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              style={inputStyle}
+              onFocus={e => (e.currentTarget.style.borderColor = '#7aa2ff')}
+              onBlur={e => (e.currentTarget.style.borderColor = '#26304b')}
               required
             />
           </div>
 
+          {/* Ora */}
           <div>
-            <label className="block font-medium mb-2">Durata</label>
+            <label style={labelStyle}>Ora inizio *</label>
+            <div className="flex gap-3">
+              <select
+                value={startHour}
+                onChange={(e) => setStartHour(e.target.value)}
+                style={{ ...inputStyle }}
+                onFocus={e => (e.currentTarget.style.borderColor = '#7aa2ff')}
+                onBlur={e => (e.currentTarget.style.borderColor = '#26304b')}
+              >
+                {hours.map(h => (
+                  <option key={h} value={h}>{h}:00</option>
+                ))}
+              </select>
+              <select
+                value={startMinute}
+                onChange={(e) => setStartMinute(e.target.value)}
+                style={{ ...inputStyle }}
+                onFocus={e => (e.currentTarget.style.borderColor = '#7aa2ff')}
+                onBlur={e => (e.currentTarget.style.borderColor = '#26304b')}
+              >
+                {minutes.map(m => (
+                  <option key={m} value={m}>:{m}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Durata */}
+          <div>
+            <label style={labelStyle}>Durata</label>
             <select
               value={duration}
               onChange={(e) => setDuration(Number(e.target.value))}
-              className="w-full border rounded px-3 py-2"
+              style={inputStyle}
+              onFocus={e => (e.currentTarget.style.borderColor = '#7aa2ff')}
+              onBlur={e => (e.currentTarget.style.borderColor = '#26304b')}
             >
               <option value={15}>15 minuti</option>
               <option value={30}>30 minuti</option>
@@ -181,28 +268,43 @@ export default function QuickAppointmentModal({
             </select>
           </div>
 
+          {/* Luogo */}
           <div>
-            <label className="block font-medium mb-2">Luogo</label>
+            <label style={labelStyle}>Luogo</label>
             <input
               type="text"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="Studio, online, ecc."
-              className="w-full border rounded px-3 py-2"
+              style={inputStyle}
+              onFocus={e => (e.currentTarget.style.borderColor = '#7aa2ff')}
+              onBlur={e => (e.currentTarget.style.borderColor = '#26304b')}
             />
           </div>
 
-          <div className="flex gap-3 pt-4 border-t">
-            <button 
+          {/* Bottoni */}
+          <div className="flex gap-3 pt-4" style={{ borderTop: '1px solid #26304b' }}>
+            <button
               onClick={onClose}
-              className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
+              className="flex-1 px-6 py-3 rounded-lg font-medium transition-all"
+              style={{ background: '#141a2c', border: '1px solid #26304b', color: '#a8b2d6' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#7aa2ff'; e.currentTarget.style.color = '#f1f5ff'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = '#26304b'; e.currentTarget.style.color = '#a8b2d6'; }}
             >
               Annulla
             </button>
-            <button 
+            <button
               onClick={handleCreate}
-              disabled={isLoading || !startsAt || !title}
-              className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
+              disabled={isLoading || !startDate || !title}
+              className="flex-1 px-6 py-3 rounded-lg font-medium transition-all"
+              style={{
+                background: isLoading || !startDate || !title ? '#26304b' : '#7aa2ff',
+                color: isLoading || !startDate || !title ? '#a8b2d6' : '#0b0f1c',
+                border: 'none',
+                cursor: isLoading || !startDate || !title ? 'not-allowed' : 'pointer'
+              }}
+              onMouseEnter={e => { if (!isLoading && startDate && title) e.currentTarget.style.background = '#9ab8ff'; }}
+              onMouseLeave={e => { if (!isLoading && startDate && title) e.currentTarget.style.background = '#7aa2ff'; }}
             >
               {isLoading ? 'Creazione...' : '✅ Crea'}
             </button>

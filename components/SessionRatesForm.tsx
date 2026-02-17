@@ -20,14 +20,25 @@ type SessionRatesFormProps = {
   onSave: () => void;
 };
 
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  background: '#0b0f1c',
+  border: '2px solid #26304b',
+  borderRadius: '8px',
+  padding: '8px 10px',
+  color: '#f1f5ff',
+  fontSize: '14px',
+  outline: 'none',
+};
+
 export default function SessionRatesForm({ patientId, initialData, onSave }: SessionRatesFormProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  
+
   const [durationIndividual, setDurationIndividual] = useState(initialData.session_duration_individual || 0);
   const [durationCouple, setDurationCouple] = useState(initialData.session_duration_couple || 0);
   const [durationFamily, setDurationFamily] = useState(initialData.session_duration_family || 0);
-  
+
   const [rateIndividual, setRateIndividual] = useState(initialData.rate_individual || 0);
   const [rateCouple, setRateCouple] = useState(initialData.rate_couple || 0);
   const [rateFamily, setRateFamily] = useState(initialData.rate_family || 0);
@@ -48,7 +59,7 @@ export default function SessionRatesForm({ patientId, initialData, onSave }: Ses
         .eq('id', patientId);
 
       if (error) throw error;
-      
+
       alert('✅ Tariffe salvate!');
       setIsEditing(false);
       onSave();
@@ -59,16 +70,41 @@ export default function SessionRatesForm({ patientId, initialData, onSave }: Ses
     }
   }
 
+  const rateCardStyle: React.CSSProperties = {
+    background: '#0b0f1c',
+    border: '1px solid #26304b',
+    borderRadius: '10px',
+    padding: '14px',
+  };
+
+  const labelSmall: React.CSSProperties = {
+    display: 'block',
+    fontSize: '11px',
+    color: '#a8b2d6',
+    marginBottom: '4px',
+    fontWeight: 500,
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+  };
+
   return (
-    <div className="bg-white border rounded-lg p-6 shadow-sm">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-bold text-lg flex items-center gap-2">
-          <span>💰</span> Tariffe e Durate Sedute
-        </h3>
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
         {!isEditing && (
-          <button 
+          <button
             onClick={() => setIsEditing(true)}
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+            style={{
+              background: 'none',
+              border: '1px solid #26304b',
+              borderRadius: '6px',
+              padding: '5px 12px',
+              color: '#7aa2ff',
+              fontSize: '13px',
+              cursor: 'pointer',
+              fontWeight: 500,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#7aa2ff'; e.currentTarget.style.background = 'rgba(122,162,255,0.08)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#26304b'; e.currentTarget.style.background = 'none'; }}
           >
             ✏️ Modifica
           </button>
@@ -76,126 +112,83 @@ export default function SessionRatesForm({ patientId, initialData, onSave }: Ses
       </div>
 
       {!isEditing ? (
-        <div className="grid md:grid-cols-3 gap-4">
-          <div className="border rounded-lg p-4 bg-gray-50">
-            <div className="text-sm text-gray-600 mb-2">👤 Individuale</div>
-            <div className="font-semibold text-lg">€{rateIndividual}</div>
-            <div className="text-sm text-gray-600">{durationIndividual} minuti</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+          <div style={rateCardStyle}>
+            <div style={{ fontSize: '12px', color: '#a8b2d6', marginBottom: '8px' }}>👤 Individuale</div>
+            <div style={{ fontWeight: 700, fontSize: '20px', color: '#f1f5ff' }}>€{rateIndividual}</div>
+            <div style={{ fontSize: '12px', color: '#7aa2ff', marginTop: '4px' }}>{durationIndividual} min</div>
           </div>
-          <div className="border rounded-lg p-4 bg-gray-50">
-            <div className="text-sm text-gray-600 mb-2">👥 Coppia</div>
-            <div className="font-semibold text-lg">€{rateCouple}</div>
-            <div className="text-sm text-gray-600">{durationCouple} minuti</div>
+          <div style={rateCardStyle}>
+            <div style={{ fontSize: '12px', color: '#a8b2d6', marginBottom: '8px' }}>👥 Coppia</div>
+            <div style={{ fontWeight: 700, fontSize: '20px', color: '#f1f5ff' }}>€{rateCouple}</div>
+            <div style={{ fontSize: '12px', color: '#7aa2ff', marginTop: '4px' }}>{durationCouple} min</div>
           </div>
-          <div className="border rounded-lg p-4 bg-gray-50">
-            <div className="text-sm text-gray-600 mb-2">👨‍👩‍👧‍👦 Famiglia</div>
-            <div className="font-semibold text-lg">€{rateFamily}</div>
-            <div className="text-sm text-gray-600">{durationFamily} minuti</div>
+          <div style={rateCardStyle}>
+            <div style={{ fontSize: '12px', color: '#a8b2d6', marginBottom: '8px' }}>👨‍👩‍👧 Famiglia</div>
+            <div style={{ fontWeight: 700, fontSize: '20px', color: '#f1f5ff' }}>€{rateFamily}</div>
+            <div style={{ fontSize: '12px', color: '#7aa2ff', marginTop: '4px' }}>{durationFamily} min</div>
           </div>
         </div>
       ) : (
-        <div className="space-y-6">
-          <div className="grid md:grid-cols-3 gap-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
             {/* Individuale */}
-            <div className="border rounded-lg p-4">
-              <label className="block text-sm font-medium mb-3">👤 Seduta Individuale</label>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">Durata (minuti)</label>
-                  <input
-                    type="number"
-                    value={durationIndividual}
-                    onChange={(e) => setDurationIndividual(Number(e.target.value))}
-                    className="w-full border rounded px-3 py-2"
-                    min="15"
-                    step="15"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">Tariffa (€)</label>
-                  <input
-                    type="number"
-                    value={rateIndividual}
-                    onChange={(e) => setRateIndividual(Number(e.target.value))}
-                    className="w-full border rounded px-3 py-2"
-                    min="0"
-                    step="5"
-                  />
-                </div>
+            <div style={{ background: '#0b0f1c', border: '1px solid #26304b', borderRadius: '10px', padding: '12px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5ff', marginBottom: '10px' }}>👤 Individuale</div>
+              <div style={{ marginBottom: '8px' }}>
+                <label style={labelSmall}>Durata (min)</label>
+                <input type="number" value={durationIndividual} onChange={e => setDurationIndividual(Number(e.target.value))} style={inputStyle} min="15" step="15"
+                  onFocus={e => (e.currentTarget.style.borderColor = '#7aa2ff')} onBlur={e => (e.currentTarget.style.borderColor = '#26304b')} />
+              </div>
+              <div>
+                <label style={labelSmall}>Tariffa (€)</label>
+                <input type="number" value={rateIndividual} onChange={e => setRateIndividual(Number(e.target.value))} style={inputStyle} min="0" step="5"
+                  onFocus={e => (e.currentTarget.style.borderColor = '#7aa2ff')} onBlur={e => (e.currentTarget.style.borderColor = '#26304b')} />
               </div>
             </div>
 
             {/* Coppia */}
-            <div className="border rounded-lg p-4">
-              <label className="block text-sm font-medium mb-3">👥 Seduta Coppia</label>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">Durata (minuti)</label>
-                  <input
-                    type="number"
-                    value={durationCouple}
-                    onChange={(e) => setDurationCouple(Number(e.target.value))}
-                    className="w-full border rounded px-3 py-2"
-                    min="15"
-                    step="15"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">Tariffa (€)</label>
-                  <input
-                    type="number"
-                    value={rateCouple}
-                    onChange={(e) => setRateCouple(Number(e.target.value))}
-                    className="w-full border rounded px-3 py-2"
-                    min="0"
-                    step="5"
-                  />
-                </div>
+            <div style={{ background: '#0b0f1c', border: '1px solid #26304b', borderRadius: '10px', padding: '12px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5ff', marginBottom: '10px' }}>👥 Coppia</div>
+              <div style={{ marginBottom: '8px' }}>
+                <label style={labelSmall}>Durata (min)</label>
+                <input type="number" value={durationCouple} onChange={e => setDurationCouple(Number(e.target.value))} style={inputStyle} min="15" step="15"
+                  onFocus={e => (e.currentTarget.style.borderColor = '#7aa2ff')} onBlur={e => (e.currentTarget.style.borderColor = '#26304b')} />
+              </div>
+              <div>
+                <label style={labelSmall}>Tariffa (€)</label>
+                <input type="number" value={rateCouple} onChange={e => setRateCouple(Number(e.target.value))} style={inputStyle} min="0" step="5"
+                  onFocus={e => (e.currentTarget.style.borderColor = '#7aa2ff')} onBlur={e => (e.currentTarget.style.borderColor = '#26304b')} />
               </div>
             </div>
 
             {/* Famiglia */}
-            <div className="border rounded-lg p-4">
-              <label className="block text-sm font-medium mb-3">👨‍👩‍👧‍👦 Seduta Famiglia</label>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">Durata (minuti)</label>
-                  <input
-                    type="number"
-                    value={durationFamily}
-                    onChange={(e) => setDurationFamily(Number(e.target.value))}
-                    className="w-full border rounded px-3 py-2"
-                    min="15"
-                    step="15"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">Tariffa (€)</label>
-                  <input
-                    type="number"
-                    value={rateFamily}
-                    onChange={(e) => setRateFamily(Number(e.target.value))}
-                    className="w-full border rounded px-3 py-2"
-                    min="0"
-                    step="5"
-                  />
-                </div>
+            <div style={{ background: '#0b0f1c', border: '1px solid #26304b', borderRadius: '10px', padding: '12px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5ff', marginBottom: '10px' }}>👨‍👩‍👧 Famiglia</div>
+              <div style={{ marginBottom: '8px' }}>
+                <label style={labelSmall}>Durata (min)</label>
+                <input type="number" value={durationFamily} onChange={e => setDurationFamily(Number(e.target.value))} style={inputStyle} min="15" step="15"
+                  onFocus={e => (e.currentTarget.style.borderColor = '#7aa2ff')} onBlur={e => (e.currentTarget.style.borderColor = '#26304b')} />
+              </div>
+              <div>
+                <label style={labelSmall}>Tariffa (€)</label>
+                <input type="number" value={rateFamily} onChange={e => setRateFamily(Number(e.target.value))} style={inputStyle} min="0" step="5"
+                  onFocus={e => (e.currentTarget.style.borderColor = '#7aa2ff')} onBlur={e => (e.currentTarget.style.borderColor = '#26304b')} />
               </div>
             </div>
           </div>
 
-          <div className="flex gap-3 pt-4 border-t">
-            <button
-              onClick={() => setIsEditing(false)}
-              className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
-            >
+          <div style={{ display: 'flex', gap: '10px', paddingTop: '8px', borderTop: '1px solid #26304b' }}>
+            <button onClick={() => setIsEditing(false)}
+              style={{ background: '#141a2c', color: '#a8b2d6', border: '1px solid #26304b', borderRadius: '8px', padding: '8px 16px', fontWeight: 500, cursor: 'pointer', fontSize: '14px' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#7aa2ff'; e.currentTarget.style.color = '#f1f5ff'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = '#26304b'; e.currentTarget.style.color = '#a8b2d6'; }}>
               Annulla
             </button>
-            <button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium"
-            >
+            <button onClick={handleSave} disabled={isSaving}
+              style={{ background: '#7aa2ff', color: '#0b1022', border: 'none', borderRadius: '8px', padding: '8px 16px', fontWeight: 600, cursor: isSaving ? 'not-allowed' : 'pointer', fontSize: '14px', opacity: isSaving ? 0.6 : 1 }}
+              onMouseEnter={e => { if (!isSaving) e.currentTarget.style.background = '#9ab8ff'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#7aa2ff'; }}>
               {isSaving ? 'Salvataggio...' : '💾 Salva Tariffe'}
             </button>
           </div>

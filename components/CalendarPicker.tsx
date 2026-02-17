@@ -50,7 +50,6 @@ export default function CalendarPicker({ isOpen, onClose, onSelectDateTime }: Ca
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Carica appuntamenti quando si apre il calendario
   useEffect(() => {
     if (isOpen) {
       loadAppointments();
@@ -94,20 +93,16 @@ export default function CalendarPicker({ isOpen, onClose, onSelectDateTime }: Ca
     return appointments.filter(apt => {
       const aptStart = new Date(apt.starts_at);
       const aptEnd = new Date(apt.ends_at);
-      
-      // Controlla se c'è sovrapposizione
       return (aptStart < slotEnd && aptEnd > slotStart);
     });
   }
 
   function handleCellClick(day: Date, hour: number) {
     const conflictingAppts = getAppointmentsForTimeSlot(day, hour);
-    
     if (conflictingAppts.length > 0) {
       alert(`⚠️ Conflitto di orario!\n\nEsiste già un appuntamento in questo slot:\n"${conflictingAppts[0].title}" alle ${new Date(conflictingAppts[0].starts_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`);
       return;
     }
-
     const selectedDateTime = new Date(day);
     selectedDateTime.setHours(hour, 0, 0, 0);
     onSelectDateTime(selectedDateTime.toISOString());
@@ -116,64 +111,84 @@ export default function CalendarPicker({ isOpen, onClose, onSelectDateTime }: Ca
   if (!isOpen) return null;
 
   const weekDays = getWeekDays(weekOffset);
-  const hours = Array.from({ length: 15 }, (_, i) => i + 8); // 8:00 - 22:00
+  const hours = Array.from({ length: 16 }, (_, i) => i + 7); // 7:00 - 22:00
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-t-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold">📅 Seleziona Data e Ora</h2>
-              <p className="text-sm opacity-90 mt-1">
-                Clicca su uno slot libero per creare l'appuntamento
-                {loading && ' • Caricamento...'}
-              </p>
-            </div>
-            <button 
-              onClick={onClose} 
-              className="text-white hover:text-gray-200 text-3xl font-bold leading-none"
-            >
-              ×
-            </button>
+    <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+      <div className="rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto" style={{
+        background: '#0b0f1c',
+        border: '2px solid #26304b',
+        boxShadow: '0 24px 64px rgba(0,0,0,0.5)'
+      }}>
+        {/* Header */}
+        <div className="p-6 rounded-t-2xl flex items-center justify-between" style={{
+          background: '#141a2c',
+          borderBottom: '2px solid #26304b'
+        }}>
+          <div>
+            <h2 className="text-2xl font-bold" style={{ color: '#f1f5ff' }}>📅 Seleziona Data e Ora</h2>
+            <p className="text-sm mt-1" style={{ color: '#a8b2d6' }}>
+              Clicca su uno slot libero per creare l'appuntamento
+              {loading && ' • Caricamento...'}
+            </p>
           </div>
+          <button
+            onClick={onClose}
+            className="text-3xl font-bold leading-none transition-colors"
+            style={{ color: '#a8b2d6' }}
+            onMouseEnter={e => (e.currentTarget.style.color = '#f1f5ff')}
+            onMouseLeave={e => (e.currentTarget.style.color = '#a8b2d6')}
+          >
+            ×
+          </button>
         </div>
 
         <div className="p-6 space-y-4">
-          <div className="flex items-center justify-between bg-gray-50 border rounded-lg p-4">
-            <button 
-              onClick={() => setWeekOffset(weekOffset - 1)} 
-              className="px-4 py-2 bg-white border hover:bg-gray-100 rounded-lg font-medium transition"
+          {/* Navigazione settimana */}
+          <div className="flex items-center justify-between rounded-xl p-4" style={{
+            background: '#141a2c',
+            border: '1px solid #26304b'
+          }}>
+            <button
+              onClick={() => setWeekOffset(weekOffset - 1)}
+              className="px-4 py-2 rounded-lg font-medium transition-all"
+              style={{ background: '#0b0f1c', border: '1px solid #26304b', color: '#a8b2d6' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#7aa2ff'; e.currentTarget.style.color = '#7aa2ff'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = '#26304b'; e.currentTarget.style.color = '#a8b2d6'; }}
             >
               ← Settimana Precedente
             </button>
-            <div className="font-semibold text-lg">
-              {weekDays[0].toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })} - {weekDays[6].toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}
+            <div className="font-semibold text-lg" style={{ color: '#f1f5ff' }}>
+              {weekDays[0].toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })} – {weekDays[6].toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}
             </div>
-            <button 
-              onClick={() => setWeekOffset(weekOffset + 1)} 
-              className="px-4 py-2 bg-white border hover:bg-gray-100 rounded-lg font-medium transition"
+            <button
+              onClick={() => setWeekOffset(weekOffset + 1)}
+              className="px-4 py-2 rounded-lg font-medium transition-all"
+              style={{ background: '#0b0f1c', border: '1px solid #26304b', color: '#a8b2d6' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#7aa2ff'; e.currentTarget.style.color = '#7aa2ff'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = '#26304b'; e.currentTarget.style.color = '#a8b2d6'; }}
             >
               Settimana Successiva →
             </button>
           </div>
 
-          <div className="border rounded-lg overflow-x-auto">
+          {/* Griglia calendario */}
+          <div className="rounded-xl overflow-x-auto" style={{ border: '1px solid #26304b' }}>
             <table className="w-full">
               <thead>
-                <tr className="border-b bg-gray-50">
-                  <th className="p-3 text-left w-24 sticky left-0 bg-gray-50 font-semibold">Ora</th>
+                <tr style={{ borderBottom: '2px solid #26304b', background: '#141a2c' }}>
+                  <th className="p-3 text-left w-20 sticky left-0 font-semibold" style={{ background: '#141a2c', color: '#a8b2d6' }}>Ora</th>
                   {weekDays.map((day, i) => {
                     const isToday = day.toDateString() === new Date().toDateString();
                     return (
                       <th key={i} className="p-3 text-center min-w-32">
-                        <div className={`font-semibold ${isToday ? 'text-blue-600' : ''}`}>
+                        <div className="font-semibold" style={{ color: isToday ? '#7aa2ff' : '#f1f5ff' }}>
                           {day.toLocaleDateString('it-IT', { weekday: 'short' })}
                         </div>
-                        <div className={`text-sm ${isToday ? 'text-blue-600 font-bold' : 'text-gray-600'}`}>
+                        <div className="text-sm" style={{ color: isToday ? '#7aa2ff' : '#a8b2d6', fontWeight: isToday ? 'bold' : 'normal' }}>
                           {day.getDate()}
                         </div>
-                        {isToday && <div className="text-xs text-blue-600">Oggi</div>}
+                        {isToday && <div className="text-xs" style={{ color: '#7aa2ff' }}>Oggi</div>}
                       </th>
                     );
                   })}
@@ -181,8 +196,8 @@ export default function CalendarPicker({ isOpen, onClose, onSelectDateTime }: Ca
               </thead>
               <tbody>
                 {hours.map(hour => (
-                  <tr key={hour} className="border-b hover:bg-gray-50">
-                    <td className="p-3 text-sm font-medium text-gray-700 sticky left-0 bg-white">
+                  <tr key={hour} style={{ borderBottom: '1px solid #26304b' }}>
+                    <td className="p-3 text-sm font-medium sticky left-0" style={{ background: '#0b0f1c', color: '#a8b2d6' }}>
                       {hour}:00
                     </td>
                     {weekDays.map((day, dayIndex) => {
@@ -191,41 +206,49 @@ export default function CalendarPicker({ isOpen, onClose, onSelectDateTime }: Ca
                       const isPast = cellDateTime < new Date();
                       const slotAppointments = getAppointmentsForTimeSlot(day, hour);
                       const hasConflict = slotAppointments.length > 0;
-                      
+
                       return (
-                        <td 
-                          key={dayIndex} 
+                        <td
+                          key={dayIndex}
                           onClick={() => !isPast && !hasConflict && handleCellClick(day, hour)}
-                          className={`p-1 border-l align-top ${
-                            isPast 
-                              ? 'bg-gray-100 cursor-not-allowed' 
-                              : hasConflict
-                                ? 'bg-red-50 cursor-not-allowed'
-                                : 'cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition'
-                          }`}
+                          style={{
+                            borderLeft: '1px solid #26304b',
+                            verticalAlign: 'top',
+                            background: isPast ? '#0b0f1c' : hasConflict ? 'rgba(122,162,255,0.08)' : 'transparent',
+                            cursor: isPast || hasConflict ? 'not-allowed' : 'pointer',
+                            opacity: isPast ? 0.4 : 1,
+                          }}
+                          onMouseEnter={e => {
+                            if (!isPast && !hasConflict) e.currentTarget.style.background = 'rgba(122,162,255,0.12)';
+                          }}
+                          onMouseLeave={e => {
+                            if (!isPast && !hasConflict) e.currentTarget.style.background = 'transparent';
+                          }}
                         >
                           {hasConflict ? (
                             <div className="p-2">
                               {slotAppointments.map(apt => (
-                                <div 
-                                  key={apt.id} 
-                                  className="bg-blue-100 border-l-4 border-blue-600 p-2 mb-1 text-xs rounded"
+                                <div
+                                  key={apt.id}
+                                  className="p-2 mb-1 text-xs rounded"
+                                  style={{
+                                    background: 'rgba(122,162,255,0.15)',
+                                    borderLeft: '3px solid #7aa2ff',
+                                    color: '#a8b2d6'
+                                  }}
                                 >
-                                  <div className="font-medium">
+                                  <div className="font-medium" style={{ color: '#7aa2ff' }}>
                                     {new Date(apt.starts_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
                                   </div>
-                                  <div className="truncate">{apt.title}</div>
+                                  <div className="truncate" style={{ color: '#f1f5ff' }}>{apt.title}</div>
                                   {getPatientName(apt.patients) && (
-                                    <div className="text-gray-600 truncate">{getPatientName(apt.patients)}</div>
+                                    <div className="truncate" style={{ color: '#a8b2d6' }}>{getPatientName(apt.patients)}</div>
                                   )}
                                 </div>
                               ))}
                             </div>
                           ) : (
-                            <div className={`
-                              h-16 flex items-center justify-center rounded
-                              ${isPast ? 'text-gray-400' : 'text-gray-600 hover:text-blue-600 hover:font-medium'}
-                            `}>
+                            <div className="h-16 flex items-center justify-center rounded text-sm" style={{ color: isPast ? '#26304b' : '#a8b2d6' }}>
                               {isPast ? '—' : '+ Crea'}
                             </div>
                           )}
@@ -238,10 +261,14 @@ export default function CalendarPicker({ isOpen, onClose, onSelectDateTime }: Ca
             </table>
           </div>
 
-          <div className="flex justify-center pt-4">
-            <button 
+          {/* Footer */}
+          <div className="flex justify-center pt-2">
+            <button
               onClick={onClose}
-              className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
+              className="px-6 py-3 rounded-lg font-medium transition-all"
+              style={{ background: '#141a2c', border: '1px solid #26304b', color: '#a8b2d6' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#7aa2ff'; e.currentTarget.style.color = '#f1f5ff'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = '#26304b'; e.currentTarget.style.color = '#a8b2d6'; }}
             >
               Annulla
             </button>
