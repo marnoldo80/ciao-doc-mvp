@@ -8,16 +8,17 @@ const supabase = createClient(
 
 export async function POST(request: NextRequest) {
   try {
-    const { patientId } = await request.json();
+    // lastSessionOnly=true → usa solo l'ultima seduta (chiamato dalla pagina seduta post-trascrizione)
+    const { patientId, lastSessionOnly = false, transcriptText } = await request.json();
 
     if (!patientId) {
       return NextResponse.json({ error: 'Patient ID mancante' }, { status: 400 });
     }
 
-    // Recupera informazioni paziente
+    // Recupera informazioni paziente + therapist_user_id
     const { data: patient } = await supabase
       .from('patients')
-      .select('display_name')
+      .select('display_name, issues, goals, therapist_user_id')
       .eq('id', patientId)
       .single();
 
@@ -25,51 +26,149 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Paziente non trovato' }, { status: 404 });
     }
 
-    // Recupera tutte le sedute del paziente per analisi completa
-    const { data: sessionNotes } = await supabase
-      .from('session_notes')
-      .select('notes, ai_summary, session_date')
-      .eq('patient_id', patientId)
-      .order('session_date', { ascending: true });
+    // Recupera orientamento terapeutico del terapeuta
+    let therapeuticOrientation = '';
+    if (patient?.therapist_user_id) {
+      const { data: therapist } = await supabase
+        .from('therapists')
+        .select('therapeutic_orientation')
+        .eq('user_id', patient.therapist_user_id)
+        .single();
+      therapeuticOrientation = therapist?.therapeutic_orientation || '';
+    }
+
+    // Recupera sedute: solo ultima o tutte, in base al parametro
+    let sessionNotes: any[] = [];
+    if (lastSessionOnly) {
+      // Se è stata passata una trascrizione live, usala direttamente
+      if (transcriptText) {
+        sessionNotes = [{ notes: transcriptText, ai_summary: null, session_date: new Date().toISOString() }];
+      } else {
+        // Altrimenti prendi l'ultima seduta salvata
+        const { data } = await supabase
+          .from('session_notes')
+          .select('notes, ai_summary, session_date')
+          .eq('patient_id', patientId)
+          .order('session_date', { ascending: false })
+          .limit(1);
+        sessionNotes = data || [];
+      }
+    } else {
+      // Tutte le sedute (per il pulsante "Genera da sedute" nella scheda paziente)
+      const { data } = await supabase
+        .from('session_notes')
+        .select('notes, ai_summary, session_date')
+        .eq('patient_id', patientId)
+        .order('session_date', { ascending: true });
+      sessionNotes = data || [];
+    }
 
     if (!sessionNotes || sessionNotes.length === 0) {
       return NextResponse.json({ error: 'Nessuna seduta trovata per questo paziente' }, { status: 400 });
     }
 
-    // Recupera piano terapeutico esistente per contesto
-    const { data: plan } = await supabase
-      .from('therapy_plan')
-      .select('anamnesi, valutazione_psicodiagnostica, formulazione_caso')
-      .eq('patient_id', patientId)
-      .maybeSingle();
+    // Recupera piano terapeutico per contesto (solo se non lastSessionOnly)
+    let plan: any = null;
+    if (!lastSessionOnly) {
+      const { data } = await supabase
+        .from('therapy_plan')
+        .select('anamnesi, valutazione_psicodiagnostica, formulazione_caso')
+        .eq('patient_id', patientId)
+        .maybeSingle();
+      plan = data;
+    }
 
-    // Costruisci contesto dalle sedute per generazione obiettivi
+    // Recupera risultati questionari
+    const { data: questionnaireResults } = await supabase
+      .from('questionnaire_results')
+      .select('type, total, severity, created_at')
+      .eq('patient_id', patientId)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    // Costruisci contesto
     let context = `PAZIENTE: ${patient.display_name}\n\n`;
-    
+
+    if (patient?.issues) {
+      context += `PROBLEMATICHE: ${patient.issues}\n\n`;
+    }
+
     if (plan?.anamnesi) {
       context += `ANAMNESI:\n${plan.anamnesi}\n\n`;
     }
-
     if (plan?.valutazione_psicodiagnostica) {
       context += `VALUTAZIONE PSICODIAGNOSTICA:\n${plan.valutazione_psicodiagnostica}\n\n`;
     }
-
     if (plan?.formulazione_caso) {
       context += `FORMULAZIONE DEL CASO:\n${plan.formulazione_caso}\n\n`;
     }
 
-    context += `SEDUTE TERAPEUTICHE ANALIZZATE (${sessionNotes.length} sedute):\n`;
-    sessionNotes.forEach((note, i) => {
+    // Aggiungi risultati questionari se disponibili
+    if (questionnaireResults && questionnaireResults.length > 0) {
+      const latestByType = new Map<string, typeof questionnaireResults[0]>();
+      for (const r of questionnaireResults) {
+        if (!latestByType.has(r.type)) latestByType.set(r.type, r);
+      }
+      context += `RISULTATI QUESTIONARI CLINICI:\n`;
+      for (const [, r] of latestByType) {
+        const date = new Date(r.created_at).toLocaleDateString('it-IT');
+        context += `• ${r.type}: punteggio ${r.total}${r.severity ? ` → ${r.severity}` : ''} (${date})\n`;
+      }
+      context += '\n';
+    }
+
+    if (lastSessionOnly) {
+      context += `CONTENUTO DELLA SEDUTA (da analizzare):\n`;
+      const note = sessionNotes[0];
       const sessionDate = new Date(note.session_date).toLocaleDateString('it-IT');
-      context += `\nSeduta ${i + 1} (${sessionDate}):\n`;
+      context += `Seduta del ${sessionDate}:\n`;
       if (note.ai_summary) {
         context += note.ai_summary + '\n';
       } else if (note.notes) {
         context += note.notes + '\n';
       }
-    });
+    } else {
+      context += `TUTTE LE SEDUTE TERAPEUTICHE (${sessionNotes.length} sedute):\n`;
+      sessionNotes.forEach((note, i) => {
+        const sessionDate = new Date(note.session_date).toLocaleDateString('it-IT');
+        context += `\nSeduta ${i + 1} (${sessionDate}):\n`;
+        if (note.ai_summary) {
+          context += note.ai_summary + '\n';
+        } else if (note.notes) {
+          context += note.notes + '\n';
+        }
+      });
+    }
 
-    // Chiama Groq per generare obiettivi ed esercizi specifici
+    // System prompt con orientamento
+    const orientationSection = therapeuticOrientation
+      ? `\nORIENTAMENTO TERAPEUTICO DEL CLINICO: ${therapeuticOrientation}
+Genera obiettivi ed esercizi coerenti con questo approccio. Usa tecniche, terminologia e framework tipici di questo orientamento.\n`
+      : '\nUsa un approccio eclettico evidence-based.\n';
+
+    const sessionScope = lastSessionOnly
+      ? 'Analizza il contenuto di questa singola seduta e genera obiettivi ed esercizi specifici per il prossimo periodo, basati su quanto emerso.'
+      : 'Analizza il percorso terapeutico completo e genera obiettivi ed esercizi che tengano conto della progressione del paziente.';
+
+    const systemPrompt = `Sei uno psicoterapeuta clinico esperto. ${sessionScope}
+${orientationSection}
+Genera suggerimenti in formato JSON con questa struttura esatta:
+{
+  "obiettivi_generali": ["obiettivo generale 1", "obiettivo generale 2", "obiettivo generale 3"],
+  "obiettivi_specifici": ["obiettivo specifico 1", "obiettivo specifico 2", "obiettivo specifico 3", "obiettivo specifico 4"],
+  "esercizi": ["esercizio pratico 1", "esercizio pratico 2", "esercizio pratico 3", "esercizio pratico 4"]
+}
+
+ISTRUZIONI:
+- Obiettivi generali: ampi, strategici, orientati al cambiamento complessivo
+- Obiettivi specifici: concreti, misurabili, SMART, collegati ai contenuti emersi
+- Esercizi: pratici, graduali, coerenti con l'orientamento teorico del clinico
+- Se ci sono risultati di questionari, usali per prioritizzare (punteggi elevati = maggiore urgenza)
+- Basati SOLO sui dati disponibili, non inventare
+- Fornisci comunque suggerimenti utili anche se i dati sono parziali
+
+Rispondi SOLO con il JSON, senza altro testo.`;
+
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -79,33 +178,8 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
         messages: [
-          {
-            role: 'system',
-            content: `Sei uno psicoterapeuta clinico esperto. Analizza le sedute terapeutiche fornite e genera obiettivi ed esercizi specifici basati sui contenuti emersi e sui progressi del paziente.
-
-Genera suggerimenti in formato JSON con questa struttura esatta:
-{
-  "obiettivi_generali": ["obiettivo generale 1", "obiettivo generale 2", "obiettivo generale 3"],
-  "obiettivi_specifici": ["obiettivo specifico 1", "obiettivo specifico 2", "obiettivo specifico 3", "obiettivo specifico 4"],
-  "esercizi": ["esercizio pratico 1", "esercizio pratico 2", "esercizio pratico 3", "esercizio pratico 4"]
-}
-
-ISTRUZIONI SPECIFICHE:
-- ANALIZZA le sedute per identificare pattern, problematiche ricorrenti, progressi e aree di miglioramento
-- Obiettivi generali: ampi, strategici, orientati al cambiamento complessivo
-- Obiettivi specifici: concreti, misurabili, collegati alle sessioni analizzate
-- Esercizi: pratici, graduali, evidence-based (CBT, ACT, mindfulness, tecniche comportamentali)
-- Considera la progressione terapeutica emersa dalle sedute
-- Usa terminologia clinica appropriata
-- Gli obiettivi devono essere SMART (Specifici, Misurabili, Raggiungibili, Rilevanti, Temporizzati)
-- Gli esercizi devono essere collegati direttamente alle problematiche emerse
-
-Rispondi SOLO con il JSON, senza altro testo.`
-          },
-          {
-            role: 'user',
-            content: context
-          }
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: context }
         ],
         temperature: 0.3,
         max_tokens: 2000,
@@ -121,19 +195,12 @@ Rispondi SOLO con il JSON, senza altro testo.`
     const data = await response.json();
     const aiResponse = data.choices?.[0]?.message?.content || '';
 
-    // Parse JSON dalla risposta IA
     try {
-      // Pulisce la risposta da eventuali markdown e spazi
       let cleanResponse = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      
-      // Rimuove eventuali caratteri di controllo
       cleanResponse = cleanResponse.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
-      
-      console.log('Risposta IA pulita:', cleanResponse); // Per debugging
-      
+
       const objectives = JSON.parse(cleanResponse);
-      
-      // Validazione struttura
+
       if (!objectives.obiettivi_generali || !objectives.obiettivi_specifici || !objectives.esercizi) {
         throw new Error('Struttura JSON non valida - campi mancanti');
       }
@@ -143,13 +210,11 @@ Rispondi SOLO con il JSON, senza altro testo.`
         obiettivi_specifici: objectives.obiettivi_specifici || [],
         esercizi: objectives.esercizi || [],
         sessions_analyzed: sessionNotes.length,
-        patient_name: patient.display_name
+        patient_name: patient.display_name,
+        last_session_only: lastSessionOnly,
       });
     } catch (parseError) {
       console.error('Errore parsing JSON IA:', parseError);
-      console.error('Risposta originale IA:', aiResponse);
-      
-      // Fallback: restituisci struttura vuota invece di errore
       return NextResponse.json({
         obiettivi_generali: ['Obiettivo generale da definire manualmente'],
         obiettivi_specifici: ['Obiettivo specifico da definire manualmente'],

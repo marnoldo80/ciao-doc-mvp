@@ -41,6 +41,7 @@ function NuovaNotaForm() {
   // Stati di caricamento
   const [loadingGeneration, setLoadingGeneration] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [sendingToPatient, setSendingToPatient] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   // Contenuti temporanei per editing
@@ -121,9 +122,10 @@ function NuovaNotaForm() {
       const response = await fetch('/api/ai-summary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transcript: text })
+        // Passa patientId per recuperare l'orientamento del terapeuta
+        body: JSON.stringify({ transcript: text, patientId })
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setAiSummary(data.summary || '');
@@ -155,9 +157,11 @@ function NuovaNotaForm() {
       const response = await fetch('/api/generate-objectives', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ patientId })
+        // lastSessionOnly=true: genera obiettivi ed esercizi solo da questa seduta
+        // transcriptText: passa la trascrizione live (non ancora salvata in DB)
+        body: JSON.stringify({ patientId, lastSessionOnly: true, transcriptText: text })
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setObjectives(data.obiettivi_specifici || []);
@@ -165,6 +169,44 @@ function NuovaNotaForm() {
       }
     } catch (e) {
       console.error('Errore generazione obiettivi:', e);
+    }
+  }
+
+  async function sendObjectivesToPatient() {
+    if (!patientId || (objectives.length === 0 && exercises.length === 0)) return;
+    setSendingToPatient(true);
+    try {
+      // Carica il piano terapeutico esistente per aggiornarlo
+      const { data: existingPlan } = await supabase
+        .from('therapy_plan')
+        .select('id, obiettivi_specifici, esercizi')
+        .eq('patient_id', patientId)
+        .maybeSingle();
+
+      const mergedObjectives = [
+        ...(existingPlan?.obiettivi_specifici || []),
+        ...objectives.filter((o: string) => o && o.trim())
+      ];
+      const mergedExercises = [
+        ...(existingPlan?.esercizi || []),
+        ...exercises.filter((e: string) => e && e.trim())
+      ];
+
+      if (existingPlan?.id) {
+        await supabase
+          .from('therapy_plan')
+          .update({ obiettivi_specifici: mergedObjectives, esercizi: mergedExercises })
+          .eq('id', existingPlan.id);
+      } else {
+        await supabase
+          .from('therapy_plan')
+          .insert({ patient_id: patientId, obiettivi_specifici: mergedObjectives, esercizi: mergedExercises });
+      }
+      alert('✅ Obiettivi ed esercizi inviati al paziente! Appariranno nella sua area personale.');
+    } catch (e: any) {
+      alert('Errore: ' + e.message);
+    } finally {
+      setSendingToPatient(false);
     }
   }
 
@@ -594,7 +636,7 @@ function NuovaNotaForm() {
               ✏️ Modifica
             </button>
           </div>
-          
+
           {editingExercises ? (
             <div className="space-y-3">
               <textarea
@@ -623,6 +665,35 @@ function NuovaNotaForm() {
               ))}
             </ul>
           )}
+        </div>
+      )}
+
+      {/* Banner: Invia obiettivi ed esercizi al paziente */}
+      {(objectives.length > 0 || exercises.length > 0) && (
+        <div className="rounded-lg p-5 flex items-center justify-between gap-4 flex-wrap" style={{
+          background: 'rgba(34, 197, 94, 0.08)',
+          border: '1px solid rgba(34, 197, 94, 0.3)'
+        }}>
+          <div>
+            <p className="font-semibold" style={{ color: '#22c55e' }}>
+              📤 Vuoi inviare questi obiettivi ed esercizi al paziente?
+            </p>
+            <p className="text-sm mt-1" style={{ color: '#a8b2d6' }}>
+              Appariranno nell'area personale del paziente nella sezione "Obiettivi ed Esercizi". Puoi modificarli prima di inviarli.
+            </p>
+          </div>
+          <button
+            onClick={sendObjectivesToPatient}
+            disabled={sendingToPatient || !patientId}
+            className="px-5 py-2 rounded-lg font-semibold transition-all duration-200 whitespace-nowrap"
+            style={{
+              backgroundColor: sendingToPatient ? '#4b5563' : '#22c55e',
+              color: 'white',
+              opacity: sendingToPatient || !patientId ? 0.7 : 1
+            }}
+          >
+            {sendingToPatient ? '⏳ Invio...' : '📤 Invia al Paziente'}
+          </button>
         </div>
       )}
 

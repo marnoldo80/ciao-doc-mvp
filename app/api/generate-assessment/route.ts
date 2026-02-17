@@ -14,12 +14,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Patient ID mancante' }, { status: 400 });
     }
 
-    // Recupera dati paziente
+    // Recupera dati paziente + therapist_user_id
     const { data: patient } = await supabase
       .from('patients')
-      .select('display_name, issues, goals')
+      .select('display_name, issues, goals, therapist_user_id')
       .eq('id', patientId)
       .single();
+
+    // Recupera orientamento terapeutico del terapeuta
+    let therapeuticOrientation = '';
+    if (patient?.therapist_user_id) {
+      const { data: therapist } = await supabase
+        .from('therapists')
+        .select('therapeutic_orientation')
+        .eq('user_id', patient.therapist_user_id)
+        .single();
+      therapeuticOrientation = therapist?.therapeutic_orientation || '';
+    }
 
     // Recupera TUTTE le sedute
     const { data: sessionNotes } = await supabase
@@ -29,31 +40,54 @@ export async function POST(request: NextRequest) {
       .order('session_date', { ascending: true });
 
     if (!sessionNotes || sessionNotes.length === 0) {
-      return NextResponse.json({ 
-        error: 'Nessuna seduta disponibile. Registra almeno 1-2 sedute prima di generare la valutazione.' 
+      return NextResponse.json({
+        error: 'Nessuna seduta disponibile. Registra almeno 1-2 sedute prima di generare la valutazione.'
       }, { status: 400 });
     }
 
+    // Recupera risultati questionari
+    const { data: questionnaireResults } = await supabase
+      .from('questionnaire_results')
+      .select('type, total, severity, created_at')
+      .eq('patient_id', patientId)
+      .order('created_at', { ascending: false })
+      .limit(30);
+
     // Costruisci contesto completo
     let context = `PAZIENTE: ${patient?.display_name || 'Non specificato'}\n\n`;
-    
+
     if (patient?.issues) {
       context += `PROBLEMATICHE INIZIALI:\n${patient.issues}\n\n`;
     }
-    
+
     if (patient?.goals) {
       context += `OBIETTIVI DICHIARATI:\n${patient.goals}\n\n`;
     }
 
+    // Aggiungi risultati questionari se disponibili
+    if (questionnaireResults && questionnaireResults.length > 0) {
+      // Prendi il risultato più recente per ogni tipo
+      const latestByType = new Map<string, typeof questionnaireResults[0]>();
+      for (const r of questionnaireResults) {
+        if (!latestByType.has(r.type)) latestByType.set(r.type, r);
+      }
+      context += `RISULTATI QUESTIONARI CLINICI (più recenti):\n`;
+      for (const [, r] of latestByType) {
+        const date = new Date(r.created_at).toLocaleDateString('it-IT');
+        context += `• ${r.type}: punteggio ${r.total}${r.severity ? ` → ${r.severity}` : ''} (${date})\n`;
+      }
+      context += '\n';
+    }
+
     context += `SEDUTE REGISTRATE (${sessionNotes.length} totali):\n\n`;
-    
+
     sessionNotes.forEach((note, i) => {
       context += `--- SEDUTA ${i + 1} (${new Date(note.session_date).toLocaleDateString('it-IT')}) ---\n`;
-      
+
       if (note.ai_summary) {
         context += `Riassunto IA:\n${note.ai_summary}\n\n`;
       }
-      
+
       if (note.notes) {
         context += `Note:\n${note.notes}\n\n`;
       }
@@ -63,20 +97,14 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Chiama Groq per generare valutazione
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          {
-            role: 'system',
-            content: `Sei uno psicoterapeuta clinico esperto. Sulla base delle sedute registrate, genera una valutazione clinica strutturata.
+    // System prompt con orientamento teorico
+    const orientationSection = therapeuticOrientation
+      ? `\nORIENTAMENTO TERAPEUTICO DEL CLINICO: ${therapeuticOrientation}
+Usa il framework teorico e il linguaggio clinico tipico di questo approccio nella formulazione del caso. La formulazione_caso deve riflettere la concettualizzazione propria di questo orientamento.\n`
+      : '\nUsa un approccio clinico eclettico e integrato.\n';
 
+    const systemPrompt = `Sei uno psicoterapeuta clinico esperto. Sulla base delle sedute registrate${questionnaireResults && questionnaireResults.length > 0 ? ' e dei risultati dei questionari somministrati' : ''}, genera una valutazione clinica strutturata.
+${orientationSection}
 IMPORTANTE: Devi rispondere ESCLUSIVAMENTE con un oggetto JSON valido, senza testo aggiuntivo prima o dopo.
 
 Formato JSON richiesto:
@@ -88,19 +116,27 @@ Formato JSON richiesto:
 
 CONTENUTO:
 - anamnesi: Sintesi anamnestica del paziente (storia personale, familiare, eventi significativi emersi - 200-300 parole)
-- valutazione_psicodiagnostica: Valutazione diagnostica con ipotesi diagnostiche DSM-5/ICD-11, sintomatologia, funzionamento globale (200-300 parole)
-- formulazione_caso: Formulazione del caso con fattori predisponenti/precipitanti/perpetuanti, pattern relazionali, meccanismi di mantenimento (200-300 parole)
+- valutazione_psicodiagnostica: Valutazione diagnostica con ipotesi diagnostiche DSM-5/ICD-11, sintomatologia, funzionamento globale. Se disponibili, integra i punteggi dei questionari per supportare le ipotesi diagnostiche (200-300 parole)
+- formulazione_caso: Formulazione del caso con fattori predisponenti/precipitanti/perpetuanti, pattern relazionali, meccanismi di mantenimento. Usa il framework dell'orientamento teorico del clinico (200-300 parole)
 
 REGOLE:
 - Usa linguaggio clinico professionale
-- Basati SOLO sui dati delle sedute
-- NON inventare informazioni
-- Rispondi SOLO con JSON, nient'altro`
-          },
-          {
-            role: 'user',
-            content: context
-          }
+- Basati SOLO sui dati delle sedute e dei questionari disponibili
+- NON inventare informazioni non presenti
+- Se i dati sono parziali, formula ipotesi cliniche provvisorie esplicitando l'incertezza
+- Rispondi SOLO con JSON, nient'altro`;
+
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: context }
         ],
         temperature: 0.4,
         max_tokens: 2500,
@@ -125,14 +161,12 @@ REGOLE:
       aiResponse = aiResponse.replace(/```\n?/g, '');
     }
 
-    // Parse JSON
     try {
       const assessment = JSON.parse(aiResponse.trim());
       return NextResponse.json({ assessment });
     } catch (parseError) {
       console.error('Errore parsing JSON:', aiResponse);
-      // Ritorna la risposta grezza per debug
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'Formato risposta IA non valido',
         rawResponse: aiResponse.substring(0, 500)
       }, { status: 500 });

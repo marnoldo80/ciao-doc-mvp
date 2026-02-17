@@ -670,7 +670,8 @@ export default function PatientPage() {
     if (!confirm('Generare obiettivi ed esercizi dalle sedute registrate? Questo sovrascriverà i contenuti esistenti.')) return;
     setGeneratingObjectives(true);
     try {
-      const res = await fetch('/api/generate-objectives', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ patientId: id }) });
+      // lastSessionOnly:false → analizza TUTTE le sedute (comportamento scheda paziente)
+      const res = await fetch('/api/generate-objectives', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ patientId: id, lastSessionOnly: false }) });
       if (!res.ok) { const error = await res.json(); throw new Error(error.error || 'Errore generazione'); }
       const data = await res.json();
       setObiettiviGenerali(data.obiettivi_generali || []);
