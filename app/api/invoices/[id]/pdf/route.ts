@@ -86,7 +86,7 @@ export async function GET(
     const pdfBuffer = await generateInvoicePdfBuffer(pdfData);
     const filename = `Fattura_${invoice.invoice_number}.pdf`;
 
-    return new NextResponse(pdfBuffer, {
+    return new Response(pdfBuffer.buffer as ArrayBuffer, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
