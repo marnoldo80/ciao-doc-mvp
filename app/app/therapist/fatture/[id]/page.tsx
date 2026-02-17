@@ -107,19 +107,43 @@ export default function DettaglioFattura() {
     }
   }
 
-  function downloadPDF() {
-    // Implementare generazione PDF
-    alert('📄 Funzione PDF in sviluppo');
+  async function downloadPDF() {
+    if (!invoice) return;
+    try {
+      const res = await fetch(`/api/invoices/${invoice.id}/pdf`);
+      if (!res.ok) throw new Error('Errore generazione PDF');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Fattura_${invoice.invoice_number}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      alert('Errore download PDF: ' + e.message);
+    }
   }
 
-  function sendInvoice() {
+  async function sendInvoice() {
     if (!invoice?.patient_email) {
       alert('⚠️ Email paziente mancante');
       return;
     }
-    // Implementare invio email
-    alert(`📧 Fattura inviata a ${invoice.patient_email}`);
-    updateInvoiceStatus('sent');
+    try {
+      const res = await fetch('/api/send-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invoiceId: invoice.id })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Errore invio email');
+      }
+      await updateInvoiceStatus('sent');
+      alert(`📧 Fattura inviata a ${invoice.patient_email}`);
+    } catch (e: any) {
+      alert('Errore invio email: ' + e.message);
+    }
   }
 
   const getStatusColor = (status: string) => {
@@ -233,14 +257,22 @@ export default function DettaglioFattura() {
           </button>
           
           {invoice.status === 'draft' && (
-            <button
-              onClick={sendInvoice}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700"
-            >
-              📧 Invia a Paziente
-            </button>
+            <>
+              <button
+                onClick={sendInvoice}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700"
+              >
+                📧 Invia a Paziente
+              </button>
+              <button
+                onClick={() => updateInvoiceStatus('paid')}
+                className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700"
+              >
+                ✅ Segna come Pagata
+              </button>
+            </>
           )}
-          
+
           {invoice.status === 'sent' && (
             <>
               <button

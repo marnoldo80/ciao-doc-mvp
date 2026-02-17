@@ -232,7 +232,7 @@ export default function FattureDashboard() {
 
         {/* Actions Bar */}
         <div className="flex items-center justify-between">
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => setSelectedFilter('all')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -242,6 +242,16 @@ export default function FattureDashboard() {
               }`}
             >
               Tutte ({invoices.length})
+            </button>
+            <button
+              onClick={() => setSelectedFilter('draft')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                selectedFilter === 'draft'
+                  ? 'bg-orange-600 text-white'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+            >
+              📝 Bozze ({invoices.filter(i => i.status === 'draft').length})
             </button>
             <button
               onClick={() => setSelectedFilter('sent')}
