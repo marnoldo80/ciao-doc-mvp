@@ -471,7 +471,20 @@ function NuovaNotaForm() {
               </div>
             </div>
           ) : (
-            <p className="whitespace-pre-wrap" style={{ color: '#d1d5db' }}>{transcript}</p>
+            <div
+              className="whitespace-pre-wrap rounded-lg p-4"
+              style={{
+                color: '#d1d5db',
+                maxHeight: '320px',
+                overflowY: 'auto',
+                backgroundColor: 'rgba(0,0,0,0.2)',
+                border: '1px solid rgba(255,255,255,0.07)',
+                lineHeight: '1.7',
+                fontSize: '14px',
+              }}
+            >
+              {transcript}
+            </div>
           )}
         </div>
       )}

@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Aumenta il timeout della funzione serverless a 60 secondi (richiede Vercel Pro)
+// Su piano Hobby il limite è 10s → aggiorna a Pro per registrazioni lunghe
+export const maxDuration = 60;
+
 // Limite soft di avviso: oltre 90 minuti l'audio potrebbe essere molto pesante
 const WARN_MINUTES = 90;
 
