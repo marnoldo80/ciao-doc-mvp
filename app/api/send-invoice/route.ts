@@ -169,8 +169,8 @@ export async function POST(request: NextRequest) {
       })),
     };
 
-    const pdfBuffer = await generateInvoicePdfBuffer(pdfData);
-    const pdfBase64 = pdfBuffer.toString('base64');
+    const pdfUint8 = await generateInvoicePdfBuffer(pdfData);
+    const pdfBase64 = Buffer.from(pdfUint8).toString('base64');
     const pdfFilename = `Fattura_${invoice.invoice_number}.pdf`;
 
     const sgResponse = await fetch('https://api.sendgrid.com/v3/mail/send', {

@@ -209,8 +209,8 @@ function InvoiceDocument({ data }: { data: InvoicePdfData }) {
   );
 }
 
-export async function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> {
+export async function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Uint8Array> {
   const doc = React.createElement(InvoiceDocument, { data });
   const buffer = await renderToBuffer(doc as any);
-  return Buffer.from(buffer);
+  return new Uint8Array(buffer);
 }
