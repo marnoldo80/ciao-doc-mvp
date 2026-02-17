@@ -336,7 +336,6 @@ function SeduteTab({ id, sessionNotes, onOpenCalendar, loadData }: {
 }
 
 // ===== STORICO QUESTIONARI UNIFICATO =====
-type GAD7Result = { id: string; total: number; severity: string; created_at: string };
 type QResult = { id: string; type: string; total: number; severity: string | null; created_at: string };
 
 function QuestionnaireHistorySection({ patientId, gad7Results }: { patientId: string; gad7Results: GAD7Result[] }) {
