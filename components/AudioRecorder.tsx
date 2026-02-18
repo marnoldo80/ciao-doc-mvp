@@ -4,15 +4,29 @@ import { useState, useRef } from 'react';
 type AudioRecorderProps = {
   onTranscriptComplete: (transcript: string) => void;
   onSummaryComplete: (summary: string) => void;
-  patientId?: string; // opzionale: per passare orientamento al riassunto
+  patientId?: string;
 };
 
-const MAX_RECORDING_MINUTES = 120; // limite hard: 2 ore
-const WARN_RECORDING_MINUTES = 90; // avviso a 90 minuti
+const MAX_RECORDING_MINUTES = 120;
+const WARN_RECORDING_MINUTES = 90;
+
+// Deepgram API direttamente dal browser — bypassa i limiti Vercel (body 4.5MB, timeout 10s)
+const DEEPGRAM_LISTEN_URL = 'https://api.deepgram.com/v1/listen';
+
+// Parametri trascrizione
+const DEEPGRAM_PARAMS = new URLSearchParams({
+  model: 'nova-2',
+  language: 'it',
+  smart_format: 'true',
+  diarize: 'true',
+  punctuate: 'true',
+  utterances: 'true',
+});
 
 export default function AudioRecorder({ onTranscriptComplete, onSummaryComplete, patientId }: AudioRecorderProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingStatus, setProcessingStatus] = useState('');
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [recordingTime, setRecordingTime] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +63,6 @@ export default function AudioRecorder({ onTranscriptComplete, onSummaryComplete,
       timerRef.current = setInterval(() => {
         setRecordingTime(prev => {
           const next = prev + 1;
-          // Limite hard: ferma automaticamente dopo 2 ore
           if (next >= MAX_RECORDING_MINUTES * 60) {
             stopRecording();
           }
@@ -80,23 +93,67 @@ export default function AudioRecorder({ onTranscriptComplete, onSummaryComplete,
     setError(null);
 
     try {
-      const formData = new FormData();
-      formData.append('audio', audioBlob, 'recording.webm');
+      // Step 1: ottieni token temporaneo Deepgram dal server (piccola chiamata, <1s)
+      setProcessingStatus('Preparazione...');
+      const tokenRes = await fetch('/api/transcribe-token', { method: 'POST' });
+      if (!tokenRes.ok) {
+        throw new Error('Impossibile ottenere token di trascrizione');
+      }
+      const { token } = await tokenRes.json();
 
-      const transcribeRes = await fetch('/api/transcribe', {
+      // Step 2: invia audio direttamente a Deepgram dal browser
+      // Nessun passaggio da Vercel → nessun limite di dimensione o timeout
+      setProcessingStatus('Trascrizione in corso... (può richiedere qualche minuto per sedute lunghe)');
+      const deepgramRes = await fetch(`${DEEPGRAM_LISTEN_URL}?${DEEPGRAM_PARAMS.toString()}`, {
         method: 'POST',
-        body: formData,
+        headers: {
+          // JWT temporaneo: usa Bearer invece di Token
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'audio/webm',
+        },
+        body: audioBlob,
       });
 
-      if (!transcribeRes.ok) {
-        throw new Error('Errore trascrizione');
+      if (!deepgramRes.ok) {
+        const errText = await deepgramRes.text();
+        console.error('Errore Deepgram:', errText);
+        throw new Error('Errore durante la trascrizione audio');
       }
 
-      const { transcript } = await transcribeRes.json();
-      onTranscriptComplete(transcript);
+      const deepgramData = await deepgramRes.json();
 
-      // Il riassunto viene generato dalla pagina padre (sedute/nuovo) che ha già patientId
-      // Questo componente notifica solo il completamento
+      // Step 3: formatta il risultato
+      setProcessingStatus('Formattazione trascrizione...');
+      let formattedTranscript = '';
+
+      if (deepgramData.results?.utterances && deepgramData.results.utterances.length > 0) {
+        // Raggruppa utterances consecutivi dello stesso speaker
+        const utterances = deepgramData.results.utterances;
+        const grouped: { speaker: number; text: string }[] = [];
+
+        for (const utt of utterances) {
+          const last = grouped[grouped.length - 1];
+          if (last && last.speaker === utt.speaker) {
+            last.text += ' ' + utt.transcript.trim();
+          } else {
+            grouped.push({ speaker: utt.speaker, text: utt.transcript.trim() });
+          }
+        }
+
+        formattedTranscript = grouped
+          .map(g => {
+            const label = g.speaker === 0 ? 'TERAPEUTA' : 'PAZIENTE';
+            return `${label}: ${g.text}`;
+          })
+          .join('\n\n');
+
+      } else if (deepgramData.results?.channels?.[0]?.alternatives?.[0]) {
+        formattedTranscript = deepgramData.results.channels[0].alternatives[0].transcript;
+      } else {
+        throw new Error('Nessuna trascrizione trovata nel risultato');
+      }
+
+      onTranscriptComplete(formattedTranscript);
       onSummaryComplete('');
 
     } catch (err: any) {
@@ -104,6 +161,7 @@ export default function AudioRecorder({ onTranscriptComplete, onSummaryComplete,
       console.error(err);
     } finally {
       setIsProcessing(false);
+      setProcessingStatus('');
     }
   };
 
@@ -119,7 +177,7 @@ export default function AudioRecorder({ onTranscriptComplete, onSummaryComplete,
 
   const recordingMinutes = Math.floor(recordingTime / 60);
   const isLong = recordingMinutes >= WARN_RECORDING_MINUTES;
-  const timerColor = isLong ? '#f59e0b' : '#ef4444'; // giallo se lungo, rosso normale
+  const timerColor = isLong ? '#f59e0b' : '#ef4444';
 
   return (
     <div style={{ background: '#0b0f1c', border: '1px solid #26304b', borderRadius: '12px', padding: '20px' }}>
@@ -230,12 +288,12 @@ export default function AudioRecorder({ onTranscriptComplete, onSummaryComplete,
         {isProcessing && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#7aa2ff' }}>
             <div style={{ width: '20px', height: '20px', border: '2px solid #7aa2ff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
-            <span style={{ fontWeight: 500, fontSize: '14px' }}>Trascrizione in corso...</span>
+            <span style={{ fontWeight: 500, fontSize: '14px' }}>{processingStatus || 'Elaborazione...'}</span>
           </div>
         )}
       </div>
 
-      {audioBlob && (
+      {audioBlob && !isProcessing && (
         <div style={{ marginTop: '12px', fontSize: '13px', color: '#22c55e' }}>
           ✅ Registrazione completata ({formatTime(recordingTime)})
         </div>
