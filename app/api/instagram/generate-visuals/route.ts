@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { callGemini } from '@/lib/gemini';
 
 export async function POST(request: NextRequest) {
   try {
@@ -6,10 +7,6 @@ export async function POST(request: NextRequest) {
 
     if (!textContent || !originalPrompt) {
       return NextResponse.json({ error: 'Text content e prompt richiesti' }, { status: 400 });
-    }
-
-    if (!process.env.GROQ_API_KEY) {
-      return NextResponse.json({ error: 'Groq API key non configurata' }, { status: 500 });
     }
 
     // Prompt per generare concept visuali
@@ -76,34 +73,12 @@ PROMPT ORIGINALE: "${originalPrompt}"
 
 Crea concept che complementino il messaggio del testo, evitando stereotipi psicologici.`;
 
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 1200,
-      }),
+    const responseText = await callGemini({
+      systemPrompt,
+      userPrompt,
+      temperature: 0.7,
+      maxTokens: 1200,
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Errore Groq API:', errorText);
-      return NextResponse.json({ 
-        error: 'Errore generazione visual concepts', 
-        details: errorText
-      }, { status: 500 });
-    }
-
-    const data = await response.json();
-    const responseText = data.choices?.[0]?.message?.content || '';
 
     let parsedContent;
     try {

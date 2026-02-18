@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { callGemini } from '@/lib/gemini';
 
 export async function POST(request: NextRequest) {
   try {
@@ -6,10 +7,6 @@ export async function POST(request: NextRequest) {
 
     if (!prompt) {
       return NextResponse.json({ error: 'Prompt richiesto' }, { status: 400 });
-    }
-
-    if (!process.env.GROQ_API_KEY) {
-      return NextResponse.json({ error: 'Groq API key non configurata' }, { status: 500 });
     }
 
     // Prompt ottimizzato per generare 4 varianti diverse
@@ -85,34 +82,12 @@ IMPORTANTE: Scrivi contenuti che un VERO PSICOLOGO pubblicherebbe su Instagram. 
 
 Genera ora 4 varianti ORIGINALI basate sull'idea "${prompt}" senza mai ripetere le parole del prompt:`;
 
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.8,
-        max_tokens: 1500,
-      }),
+    const responseText = await callGemini({
+      systemPrompt,
+      userPrompt,
+      temperature: 0.8,
+      maxTokens: 1500,
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Errore Groq API:', errorText);
-      return NextResponse.json({ 
-        error: 'Errore generazione testi', 
-        details: errorText
-      }, { status: 500 });
-    }
-
-    const data = await response.json();
-    const responseText = data.choices?.[0]?.message?.content || '';
 
     let parsedContent;
     try {

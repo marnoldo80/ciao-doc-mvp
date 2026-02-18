@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { callGemini, toGeminiHistory } from '@/lib/gemini';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -98,36 +99,13 @@ CONTESTO PAZIENTE:
 
     systemPrompt += `\n\nSii empatico, breve (max 150 parole), incoraggiante. Usa un tono caldo e professionale. Se il paziente è in crisi o esprime pensieri autolesivi, invitalo IMMEDIATAMENTE a contattare il terapeuta o servizi di emergenza.`;
 
-    // Prepara messaggi per IA
-    const messages = [
-      { role: 'system', content: systemPrompt },
-      ...(conversationHistory || []),
-      { role: 'user', content: message }
-    ];
-
-    // Chiama Groq
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages,
-        temperature: 0.7,
-        max_tokens: 500,
-      }),
+    const reply = await callGemini({
+      systemPrompt,
+      userPrompt: message,
+      temperature: 0.7,
+      maxTokens: 500,
+      history: toGeminiHistory(conversationHistory || []),
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Errore Groq:', errorText);
-      return NextResponse.json({ error: 'Errore chatbot' }, { status: 500 });
-    }
-
-    const data = await response.json();
-    const reply = data.choices?.[0]?.message?.content || 'Mi dispiace, non ho capito. Puoi riformulare?';
 
     return NextResponse.json({ reply });
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { callGemini } from '@/lib/gemini';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -155,31 +156,12 @@ LINEE GUIDA:
 
 Rispondi SOLO con il JSON, senza altro testo.`;
 
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: context }
-        ],
-        temperature: 0.5,
-        max_tokens: 1500,
-      }),
+    const aiResponse = await callGemini({
+      systemPrompt,
+      userPrompt: context,
+      temperature: 0.5,
+      maxTokens: 1500,
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Errore Groq:', errorText);
-      return NextResponse.json({ error: 'Errore generazione suggerimenti' }, { status: 500 });
-    }
-
-    const data = await response.json();
-    const aiResponse = data.choices?.[0]?.message?.content || '';
 
     try {
       let clean = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();

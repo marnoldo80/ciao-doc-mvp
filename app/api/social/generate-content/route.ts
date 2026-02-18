@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { callGemini } from '@/lib/gemini';
 
 export async function POST(request: NextRequest) {
   try {
@@ -212,46 +213,12 @@ FORMATO RICHIESTO - Rispondi SOLO con JSON valido:
       return NextResponse.json({ error: 'Prompt non trovato per questa configurazione' }, { status: 400 });
     }
 
-    // Chiamata a Groq API con Llama (stesso sistema che già usi)
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          {
-            role: 'system',
-            content: 'Sei un esperto copywriter ITALIANO specializzato in comunicazione digitale per psicologi e psicoterapeuti. Scrivi SEMPRE in italiano perfetto, grammaticalmente corretto. Crei contenuti professionali, etici e coinvolgenti per social media. Rispondi SEMPRE e SOLO con JSON valido in ITALIANO, senza testo aggiuntivo. IMPORTANTE: mantieni il contenuto BREVE, conciso e in ITALIANO CORRETTO per social media.'
-          },
-          {
-            role: 'user',
-            content: selectedPrompt
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 800, // Ridotto per contenuti più brevi
-      }),
+    const responseText = await callGemini({
+      systemPrompt: 'Sei un esperto copywriter ITALIANO specializzato in comunicazione digitale per psicologi e psicoterapeuti. Scrivi SEMPRE in italiano perfetto, grammaticalmente corretto. Crei contenuti professionali, etici e coinvolgenti per social media. Rispondi SEMPRE e SOLO con JSON valido in ITALIANO, senza testo aggiuntivo. IMPORTANTE: mantieni il contenuto BREVE, conciso e in ITALIANO CORRETTO per social media.',
+      userPrompt: selectedPrompt,
+      temperature: 0.7,
+      maxTokens: 800,
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Errore Groq API:', {
-        status: response.status,
-        statusText: response.statusText,
-        error: errorText
-      });
-      return NextResponse.json({ 
-        error: 'Errore generazione contenuto social', 
-        details: errorText,
-        status: response.status 
-      }, { status: 500 });
-    }
-
-    const data = await response.json();
-    const responseText = data.choices?.[0]?.message?.content || '';
 
     // Parsing JSON robusto e pulizia contenuto
     let content;

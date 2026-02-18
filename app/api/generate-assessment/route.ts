@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { callGemini } from '@/lib/gemini';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -126,31 +127,12 @@ REGOLE:
 - Se i dati sono parziali, formula ipotesi cliniche provvisorie esplicitando l'incertezza
 - Rispondi SOLO con JSON, nient'altro`;
 
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: context }
-        ],
-        temperature: 0.4,
-        max_tokens: 2500,
-      }),
+    let aiResponse = await callGemini({
+      systemPrompt,
+      userPrompt: context,
+      temperature: 0.4,
+      maxTokens: 2500,
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Errore Groq:', errorText);
-      return NextResponse.json({ error: 'Errore generazione valutazione' }, { status: 500 });
-    }
-
-    const data = await response.json();
-    let aiResponse = data.choices?.[0]?.message?.content || '';
 
     // Pulisci markdown se presente
     aiResponse = aiResponse.trim();

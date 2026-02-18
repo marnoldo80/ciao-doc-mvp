@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { callGemini } from '@/lib/gemini';
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,19 +9,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Trascrizione mancante' }, { status: 400 });
     }
 
-    // Chiama Groq per estrarre temi principali
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          {
-            role: 'system',
-            content: `Sei uno psicoterapeuta esperto. Analizza la trascrizione della seduta e identifica i temi principali emersi.
+    const aiResponse = await callGemini({
+      systemPrompt: `Sei uno psicoterapeuta esperto. Analizza la trascrizione della seduta e identifica i temi principali emersi.
 
 Genera una risposta in formato JSON con questa struttura esatta:
 {
@@ -35,26 +25,11 @@ ISTRUZIONI:
 - Considera: problematiche discusse, emozioni prevalenti, strategie terapeutiche, obiettivi emersi
 - Evita temi generici come "conversazione" o "dialogo"
 
-Rispondi SOLO con il JSON, senza altro testo.`
-          },
-          {
-            role: 'user',
-            content: `Analizza questa trascrizione di seduta terapeutica e identifica i temi principali:\n\n${transcript}`
-          }
-        ],
-        temperature: 0.3,
-        max_tokens: 500,
-      }),
+Rispondi SOLO con il JSON, senza altro testo.`,
+      userPrompt: `Analizza questa trascrizione di seduta terapeutica e identifica i temi principali:\n\n${transcript}`,
+      temperature: 0.3,
+      maxTokens: 500,
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Errore Groq:', errorText);
-      return NextResponse.json({ error: 'Errore generazione temi' }, { status: 500 });
-    }
-
-    const data = await response.json();
-    const aiResponse = data.choices?.[0]?.message?.content || '';
 
     // Parse JSON dalla risposta IA
     try {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { callGemini } from '@/lib/gemini';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -62,39 +63,12 @@ ${orientationNote}
 
 Sii conciso ma completo. Usa linguaggio clinico professionale.`;
 
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Trascrizione seduta:\n\n${transcript}` }
-        ],
-        temperature: 0.3,
-        max_tokens: 2000,
-      }),
+    const summary = await callGemini({
+      systemPrompt,
+      userPrompt: `Trascrizione seduta:\n\n${transcript}`,
+      temperature: 0.3,
+      maxTokens: 2000,
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Errore Groq completo:', {
-        status: response.status,
-        statusText: response.statusText,
-        error: errorText
-      });
-      return NextResponse.json({
-        error: 'Errore generazione riassunto',
-        details: errorText,
-        status: response.status
-      }, { status: 500 });
-    }
-
-    const data = await response.json();
-    const summary = data.choices?.[0]?.message?.content || '';
 
     return NextResponse.json({ summary });
 

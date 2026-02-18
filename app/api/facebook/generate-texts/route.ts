@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { callGemini } from '@/lib/gemini';
 
 export async function POST(request: NextRequest) {
   try {
@@ -6,10 +7,6 @@ export async function POST(request: NextRequest) {
 
     if (!prompt) {
       return NextResponse.json({ error: 'Prompt richiesto' }, { status: 400 });
-    }
-
-    if (!process.env.GROQ_API_KEY) {
-      return NextResponse.json({ error: 'Groq API key non configurata' }, { status: 500 });
     }
 
     const systemPrompt = `Sei un copywriter esperto specializzato in Facebook per psicologi ITALIANI.
@@ -74,29 +71,12 @@ ESEMPI BUONI:
 - Supportivo: "Ricorda: chiedere aiuto non è debolezza, è il primo atto di coraggio verso il benessere. 💙"
 - Professionale: "Nell'approccio cognitivo-comportamentale, lavoriamo insieme per riconoscere e modificare schemi di pensiero disfunzionali."`;
 
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.8,
-        max_tokens: 1500,
-      }),
+    const responseText = await callGemini({
+      systemPrompt,
+      userPrompt,
+      temperature: 0.8,
+      maxTokens: 1500,
     });
-
-    if (!response.ok) {
-      throw new Error(`Groq API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const responseText = data.choices?.[0]?.message?.content || '';
 
     let parsedContent;
     try {
