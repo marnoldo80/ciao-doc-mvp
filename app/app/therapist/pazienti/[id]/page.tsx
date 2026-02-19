@@ -449,8 +449,14 @@ export default function PatientPage() {
 
   const [showAIModal, setShowAIModal] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<Suggestions | null>(null);
+  const [aiAssessment, setAiAssessment] = useState<{ anamnesi: string; valutazione_psicodiagnostica: string; formulazione_caso: string } | null>(null);
+  const [aiModalMode, setAiModalMode] = useState<'obiettivi' | 'valutazione'>('obiettivi');
   const [aiLoading, setAiLoading] = useState(false);
   const [generatingObjectives, setGeneratingObjectives] = useState(false);
+  const [sendingObjectives, setSendingObjectives] = useState(false);
+  const [selectedObiettiviGenerali, setSelectedObiettiviGenerali] = useState<Set<number>>(new Set());
+  const [selectedObiettiviSpecifici, setSelectedObiettiviSpecifici] = useState<Set<number>>(new Set());
+  const [selectedEsercizi, setSelectedEsercizi] = useState<Set<number>>(new Set());
 
   const [showCalendarPicker, setShowCalendarPicker] = useState(false);
   const [showQuickModal, setShowQuickModal] = useState(false);
@@ -470,6 +476,22 @@ export default function PatientPage() {
   useEffect(() => {
     if (patient) setEditPatientData(patient);
   }, [patient]);
+
+  // Ascolta evento applyAssessment dal modal valutazione
+  useEffect(() => {
+    function handleApplyAssessment(e: Event) {
+      const detail = (e as CustomEvent).detail;
+      if (detail) {
+        setAnamnesi(detail.anamnesi || '');
+        setValutazionePsico(detail.valutazione_psicodiagnostica || '');
+        setFormulazioneCaso(detail.formulazione_caso || '');
+        setEditValutazioneMode(true);
+        alert('✅ Valutazione applicata! Rivedi e salva.');
+      }
+    }
+    window.addEventListener('applyAssessment', handleApplyAssessment);
+    return () => window.removeEventListener('applyAssessment', handleApplyAssessment);
+  }, []);
 
   async function loadData() {
     setLoading(true);
@@ -645,34 +667,72 @@ export default function PatientPage() {
   }
 
   async function getSuggestions() {
-    setAiLoading(true);
-    setShowAIModal(true);
-    setAiSuggestions(null);
-    try {
-      const res = await fetch('/api/suggest-plan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ patientId: id }) });
-      if (!res.ok) throw new Error('Errore generazione suggerimenti');
-      const data = await res.json();
-      setAiSuggestions(data.suggestions);
-    } catch (e: any) {
-      alert('Errore: ' + e.message);
-      setShowAIModal(false);
-    } finally { setAiLoading(false); }
+    if (activeTab === 'valutazione') {
+      // Modalità valutazione: chiama generate-assessment
+      setAiLoading(true);
+      setAiModalMode('valutazione');
+      setShowAIModal(true);
+      setAiAssessment(null);
+      setAiSuggestions(null);
+      try {
+        const res = await fetch('/api/generate-assessment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ patientId: id }) });
+        if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Errore generazione valutazione'); }
+        const data = await res.json();
+        setAiAssessment(data.assessment);
+      } catch (e: any) {
+        alert('Errore: ' + e.message);
+        setShowAIModal(false);
+      } finally { setAiLoading(false); }
+    } else {
+      // Modalità obiettivi: chiama suggest-plan
+      setAiLoading(true);
+      setAiModalMode('obiettivi');
+      setShowAIModal(true);
+      setAiSuggestions(null);
+      setAiAssessment(null);
+      try {
+        const res = await fetch('/api/suggest-plan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ patientId: id }) });
+        if (!res.ok) throw new Error('Errore generazione suggerimenti');
+        const data = await res.json();
+        setAiSuggestions(data.suggestions);
+      } catch (e: any) {
+        alert('Errore: ' + e.message);
+        setShowAIModal(false);
+      } finally { setAiLoading(false); }
+    }
   }
 
   function applySuggestions(suggestions: Suggestions) {
-    if (activeTab === 'valutazione') {
-      setAnamnesi(suggestions.note);
-      setValutazionePsico(suggestions.note);
-      setFormulazioneCaso(suggestions.note);
-      setEditValutazioneMode(true);
-    } else {
-      setObiettiviGenerali(suggestions.obiettivi_generali);
-      setObiettiviSpecifici(suggestions.obiettivi_specifici);
-      setEsercizi(suggestions.esercizi);
-      setEditObiettiviMode(true);
-    }
+    setObiettiviGenerali(suggestions.obiettivi_generali);
+    setObiettiviSpecifici(suggestions.obiettivi_specifici);
+    setEsercizi(suggestions.esercizi);
+    setEditObiettiviMode(true);
     setShowAIModal(false);
     alert('✅ Suggerimenti applicati! Rivedi e salva.');
+  }
+
+  async function sendObiettiviToPaziente() {
+    const selOG = obiettiviGenerali.filter((_, i) => selectedObiettiviGenerali.has(i));
+    const selOS = obiettiviSpecifici.filter((_, i) => selectedObiettiviSpecifici.has(i));
+    const selEx = esercizi.filter((_, i) => selectedEsercizi.has(i));
+    if (selOG.length === 0 && selOS.length === 0 && selEx.length === 0) {
+      alert('Seleziona almeno un obiettivo o esercizio da inviare.');
+      return;
+    }
+    setSendingObjectives(true);
+    try {
+      const res = await fetch('/api/send-objectives', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patientId: id, obiettivi_generali: selOG, obiettivi_specifici: selOS, esercizi: selEx }),
+      });
+      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Errore invio'); }
+      alert('✅ Obiettivi ed esercizi inviati al paziente!');
+      setSelectedObiettiviGenerali(new Set());
+      setSelectedObiettiviSpecifici(new Set());
+      setSelectedEsercizi(new Set());
+    } catch (e: any) { alert('Errore: ' + e.message); }
+    finally { setSendingObjectives(false); }
   }
 
   async function generateObjectivesFromSessions() {
@@ -734,7 +794,7 @@ export default function PatientPage() {
     { key: 'profilo', label: 'Profilo', emoji: '👤' },
     { key: 'valutazione', label: 'Valutazione', emoji: '🎯' },
     { key: 'obiettivi', label: 'Obiettivi ed Esercizi', emoji: '💪' },
-    { key: 'area-paziente', label: 'Area Paziente', emoji: '📨' },
+    { key: 'area-paziente', label: 'Comunicazioni Paziente', emoji: '📨' },
     { key: 'sedute', label: 'Sedute', emoji: '📝' },
     { key: 'questionari', label: 'Questionari', emoji: '📋' },
   ];
@@ -1143,6 +1203,12 @@ export default function PatientPage() {
                 style={{ background: generatingObjectives ? '#26304b' : '#7aa2ff', color: generatingObjectives ? '#a8b2d6' : '#0b1022', border: 'none', borderRadius: '8px', padding: '8px 16px', fontWeight: 600, cursor: generatingObjectives ? 'not-allowed' : 'pointer', opacity: generatingObjectives ? 0.7 : 1 }}>
                 {generatingObjectives ? '⏳ Generazione...' : '🤖 Genera da Sedute'}
               </button>
+              {!editObiettiviMode && (obiettiviGenerali.length > 0 || obiettiviSpecifici.length > 0 || esercizi.length > 0) && (
+                <button onClick={sendObiettiviToPaziente} disabled={sendingObjectives}
+                  style={{ background: sendingObjectives ? '#26304b' : 'linear-gradient(135deg,#22c55e,#16a34a)', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 16px', fontWeight: 600, cursor: sendingObjectives ? 'not-allowed' : 'pointer', opacity: sendingObjectives ? 0.7 : 1 }}>
+                  {sendingObjectives ? '⏳ Invio...' : '📤 Invia al Paziente'}
+                </button>
+              )}
               {editObiettiviMode ? (
                 <>
                   <button onClick={saveObiettivi} style={btnPrimary}>💾 Salva</button>
@@ -1176,17 +1242,26 @@ export default function PatientPage() {
                       ) : obiettiviGenerali.length === 0 ? (
                         <p style={{ color: '#a8b2d6', fontSize: '14px' }}>Nessun obiettivo generale</p>
                       ) : (
-                        <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          {obiettiviGenerali.map((o, i) => {
-                            const completion = getObjectiveCompletion('generale', i);
-                            return (
-                              <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', background: '#0b0f1c', border: '1px solid #26304b', borderRadius: '8px', padding: '10px 12px' }}>
-                                <input type="checkbox" checked={completion?.completed || false} onChange={() => completion && toggleObjectiveCompletion(completion.id, completion.completed)} style={{ width: '18px', height: '18px', marginTop: '2px', cursor: 'pointer', accentColor: '#7aa2ff' }} />
-                                <span style={{ color: completion?.completed ? '#a8b2d6' : '#f1f5ff', textDecoration: completion?.completed ? 'line-through' : 'none', fontSize: '14px' }}>{o}</span>
-                              </li>
-                            );
-                          })}
-                        </ul>
+                        <>
+                          <p style={{ fontSize: '12px', color: '#66708a', marginBottom: '8px' }}>☑️ Seleziona quelli da inviare al paziente</p>
+                          <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {obiettiviGenerali.map((o, i) => {
+                              const completion = getObjectiveCompletion('generale', i);
+                              const selected = selectedObiettiviGenerali.has(i);
+                              return (
+                                <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', background: selected ? 'rgba(34,197,94,0.08)' : '#0b0f1c', border: `1px solid ${selected ? 'rgba(34,197,94,0.4)' : '#26304b'}`, borderRadius: '8px', padding: '10px 12px', transition: 'all 0.15s' }}>
+                                  <input type="checkbox" checked={completion?.completed || false} onChange={() => completion && toggleObjectiveCompletion(completion.id, completion.completed)} style={{ width: '16px', height: '16px', marginTop: '2px', cursor: 'pointer', accentColor: '#7aa2ff', flexShrink: 0 }} title="Completato" />
+                                  <span style={{ color: completion?.completed ? '#a8b2d6' : '#f1f5ff', textDecoration: completion?.completed ? 'line-through' : 'none', fontSize: '14px', flex: 1 }}>{o}</span>
+                                  <input type="checkbox" checked={selected} onChange={() => {
+                                    const next = new Set(selectedObiettiviGenerali);
+                                    selected ? next.delete(i) : next.add(i);
+                                    setSelectedObiettiviGenerali(next);
+                                  }} style={{ width: '16px', height: '16px', marginTop: '2px', cursor: 'pointer', accentColor: '#22c55e', flexShrink: 0 }} title="Seleziona per invio" />
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </>
                       )}
                     </div>
                     <div>
@@ -1197,17 +1272,26 @@ export default function PatientPage() {
                       ) : obiettiviSpecifici.length === 0 ? (
                         <p style={{ color: '#a8b2d6', fontSize: '14px' }}>Nessun obiettivo specifico</p>
                       ) : (
-                        <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          {obiettiviSpecifici.map((o, i) => {
-                            const completion = getObjectiveCompletion('specifico', i);
-                            return (
-                              <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', background: '#0b0f1c', border: '1px solid #26304b', borderRadius: '8px', padding: '10px 12px' }}>
-                                <input type="checkbox" checked={completion?.completed || false} onChange={() => completion && toggleObjectiveCompletion(completion.id, completion.completed)} style={{ width: '18px', height: '18px', marginTop: '2px', cursor: 'pointer', accentColor: '#7aa2ff' }} />
-                                <span style={{ color: completion?.completed ? '#a8b2d6' : '#f1f5ff', textDecoration: completion?.completed ? 'line-through' : 'none', fontSize: '14px' }}>{o}</span>
-                              </li>
-                            );
-                          })}
-                        </ul>
+                        <>
+                          <p style={{ fontSize: '12px', color: '#66708a', marginBottom: '8px' }}>☑️ Seleziona quelli da inviare al paziente</p>
+                          <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {obiettiviSpecifici.map((o, i) => {
+                              const completion = getObjectiveCompletion('specifico', i);
+                              const selected = selectedObiettiviSpecifici.has(i);
+                              return (
+                                <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', background: selected ? 'rgba(34,197,94,0.08)' : '#0b0f1c', border: `1px solid ${selected ? 'rgba(34,197,94,0.4)' : '#26304b'}`, borderRadius: '8px', padding: '10px 12px', transition: 'all 0.15s' }}>
+                                  <input type="checkbox" checked={completion?.completed || false} onChange={() => completion && toggleObjectiveCompletion(completion.id, completion.completed)} style={{ width: '16px', height: '16px', marginTop: '2px', cursor: 'pointer', accentColor: '#7aa2ff', flexShrink: 0 }} title="Completato" />
+                                  <span style={{ color: completion?.completed ? '#a8b2d6' : '#f1f5ff', textDecoration: completion?.completed ? 'line-through' : 'none', fontSize: '14px', flex: 1 }}>{o}</span>
+                                  <input type="checkbox" checked={selected} onChange={() => {
+                                    const next = new Set(selectedObiettiviSpecifici);
+                                    selected ? next.delete(i) : next.add(i);
+                                    setSelectedObiettiviSpecifici(next);
+                                  }} style={{ width: '16px', height: '16px', marginTop: '2px', cursor: 'pointer', accentColor: '#22c55e', flexShrink: 0 }} title="Seleziona per invio" />
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </>
                       )}
                     </div>
                   </div>
@@ -1221,20 +1305,29 @@ export default function PatientPage() {
                   ) : esercizi.length === 0 ? (
                     <p style={{ color: '#a8b2d6', fontSize: '14px' }}>Nessun esercizio</p>
                   ) : (
-                    <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {esercizi.map((ex, i) => {
-                        const completion = getExerciseCompletion(i);
-                        return (
-                          <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', background: '#0b0f1c', border: '1px solid #26304b', borderRadius: '8px', padding: '10px 12px' }}>
-                            <input type="checkbox" checked={completion?.completed || false} onChange={() => completion && toggleExerciseCompletion(completion.id, completion.completed)} style={{ width: '18px', height: '18px', marginTop: '2px', cursor: 'pointer', accentColor: '#22c55e' }} />
-                            <span style={{ color: completion?.completed ? '#a8b2d6' : '#f1f5ff', textDecoration: completion?.completed ? 'line-through' : 'none', fontSize: '14px', flex: 1 }}>{ex}</span>
-                            {completion?.completed && completion.completed_at && (
-                              <span style={{ fontSize: '11px', color: '#a8b2d6', whiteSpace: 'nowrap' }}>✓ {new Date(completion.completed_at).toLocaleDateString('it-IT')}</span>
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ul>
+                    <>
+                      <p style={{ fontSize: '12px', color: '#66708a', marginBottom: '8px' }}>☑️ Seleziona quelli da inviare al paziente</p>
+                      <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {esercizi.map((ex, i) => {
+                          const completion = getExerciseCompletion(i);
+                          const selected = selectedEsercizi.has(i);
+                          return (
+                            <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', background: selected ? 'rgba(34,197,94,0.08)' : '#0b0f1c', border: `1px solid ${selected ? 'rgba(34,197,94,0.4)' : '#26304b'}`, borderRadius: '8px', padding: '10px 12px', transition: 'all 0.15s' }}>
+                              <input type="checkbox" checked={completion?.completed || false} onChange={() => completion && toggleExerciseCompletion(completion.id, completion.completed)} style={{ width: '16px', height: '16px', marginTop: '2px', cursor: 'pointer', accentColor: '#22c55e', flexShrink: 0 }} title="Completato" />
+                              <span style={{ color: completion?.completed ? '#a8b2d6' : '#f1f5ff', textDecoration: completion?.completed ? 'line-through' : 'none', fontSize: '14px', flex: 1 }}>{ex}</span>
+                              {completion?.completed && completion.completed_at && (
+                                <span style={{ fontSize: '11px', color: '#a8b2d6', whiteSpace: 'nowrap' }}>✓ {new Date(completion.completed_at).toLocaleDateString('it-IT')}</span>
+                              )}
+                              <input type="checkbox" checked={selected} onChange={() => {
+                                const next = new Set(selectedEsercizi);
+                                selected ? next.delete(i) : next.add(i);
+                                setSelectedEsercizi(next);
+                              }} style={{ width: '16px', height: '16px', marginTop: '2px', cursor: 'pointer', accentColor: '#22c55e', flexShrink: 0 }} title="Seleziona per invio" />
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </>
                   )}
                 </div>
               </>
@@ -1671,7 +1764,7 @@ export default function PatientPage() {
 
       </div>
 
-      <AISuggestionsModal isOpen={showAIModal} onClose={() => setShowAIModal(false)} suggestions={aiSuggestions} onApply={applySuggestions} isLoading={aiLoading} />
+      <AISuggestionsModal isOpen={showAIModal} onClose={() => setShowAIModal(false)} suggestions={aiSuggestions} assessment={aiAssessment} onApply={applySuggestions} isLoading={aiLoading} mode={aiModalMode} />
       <CalendarPicker isOpen={showCalendarPicker} onClose={() => setShowCalendarPicker(false)} onSelectDateTime={handleDateTimeSelected} />
       <QuickAppointmentModal isOpen={showQuickModal} onClose={() => setShowQuickModal(false)} prefilledDateTime={selectedDateTime} onSuccess={loadData} />
 
