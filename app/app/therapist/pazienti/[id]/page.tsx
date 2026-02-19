@@ -310,29 +310,44 @@ function SeduteTab({ id, sessionNotes, onOpenCalendar, loadData }: {
                     {apt.location && <div style={{ fontSize: '12px', color: '#a8b2d6', marginTop: '3px' }}>📍 {apt.location}</div>}
                   </div>
 
-                  {/* Bottone: apri nota esistente o crea nuova seduta */}
-                  <button
-                    onClick={() => router.push(buttonDest)}
-                    style={{
-                      background: isPast ? '#1a2236' : '#7aa2ff',
-                      color: isPast ? '#7aa2ff' : '#0b1022',
-                      border: isPast ? '1px solid rgba(122,162,255,0.3)' : 'none',
-                      borderRadius: '10px',
-                      padding: '9px 16px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      fontSize: '13px',
-                      whiteSpace: 'nowrap',
-                      flexShrink: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.background = isPast ? '#243050' : '#9ab8ff'; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = isPast ? '#1a2236' : '#7aa2ff'; }}
-                  >
-                    {!isPast ? '🎙️ Entra nell\'appuntamento' : hasNote ? '📖 Vedi seduta' : '📝 Crea nota seduta'}
-                  </button>
+                  {/* Bottoni: azione principale + cancella */}
+                  <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                    <button
+                      onClick={() => router.push(buttonDest)}
+                      style={{
+                        background: isPast ? '#1a2236' : '#7aa2ff',
+                        color: isPast ? '#7aa2ff' : '#0b1022',
+                        border: isPast ? '1px solid rgba(122,162,255,0.3)' : 'none',
+                        borderRadius: '10px', padding: '9px 14px', fontWeight: 600,
+                        cursor: 'pointer', fontSize: '13px', whiteSpace: 'nowrap',
+                        display: 'flex', alignItems: 'center', gap: '6px',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = isPast ? '#243050' : '#9ab8ff'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = isPast ? '#1a2236' : '#7aa2ff'; }}
+                    >
+                      {!isPast ? '🎙️ Entra' : hasNote ? '📖 Vedi' : '📝 Nota'}
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!confirm(`Cancellare l'appuntamento "${apt.title}"?\nQuesta azione non può essere annullata.`)) return;
+                        try {
+                          const res = await fetch(`/api/appointment?id=${apt.id}`, { method: 'DELETE' });
+                          if (!res.ok) throw new Error('Errore cancellazione');
+                          loadData();
+                        } catch (e: any) { alert('Errore: ' + e.message); }
+                      }}
+                      title="Cancella appuntamento"
+                      style={{
+                        background: 'rgba(239,68,68,0.1)', color: '#ef4444',
+                        border: '1px solid rgba(239,68,68,0.3)', borderRadius: '10px',
+                        padding: '9px 12px', fontWeight: 600, cursor: 'pointer', fontSize: '14px',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.2)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; }}
+                    >
+                      🗑️
+                    </button>
+                  </div>
                 </div>
               );
             })}
