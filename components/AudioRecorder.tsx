@@ -40,7 +40,11 @@ export default function AudioRecorder({ onTranscriptComplete, onSummaryComplete,
       setError(null);
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      // Usa opus (migliore compatibilità Deepgram), fallback a webm generico
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : 'audio/webm';
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
 
@@ -56,7 +60,7 @@ export default function AudioRecorder({ onTranscriptComplete, onSummaryComplete,
         stream.getTracks().forEach(track => track.stop());
       };
 
-      mediaRecorder.start(1000); // timeslice 1s: emette chunk ogni secondo → audio completo e ben formato
+      mediaRecorder.start(); // nessun timeslice: un solo blob completo e self-contained
       setIsRecording(true);
       setRecordingTime(0);
 
@@ -78,6 +82,8 @@ export default function AudioRecorder({ onTranscriptComplete, onSummaryComplete,
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
+      // requestData() forza la raccolta di tutti i chunk audio pending prima di stop()
+      mediaRecorderRef.current.requestData();
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       if (timerRef.current) {
@@ -109,7 +115,7 @@ export default function AudioRecorder({ onTranscriptComplete, onSummaryComplete,
         headers: {
           // JWT temporaneo: usa Bearer invece di Token
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'audio/webm',
+          'Content-Type': audioBlob.type || 'audio/webm',
         },
         body: audioBlob,
       });
