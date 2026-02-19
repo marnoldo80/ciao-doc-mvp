@@ -56,7 +56,7 @@ export default function AudioRecorder({ onTranscriptComplete, onSummaryComplete,
         stream.getTracks().forEach(track => track.stop());
       };
 
-      mediaRecorder.start();
+      mediaRecorder.start(1000); // timeslice 1s: emette chunk ogni secondo → audio completo e ben formato
       setIsRecording(true);
       setRecordingTime(0);
 

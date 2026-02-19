@@ -19,7 +19,7 @@ export async function POST() {
         'Authorization': `Token ${apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ ttl_seconds: 300 }),
+      body: JSON.stringify({ ttl_seconds: 600 }),
     });
 
     if (!response.ok) {
