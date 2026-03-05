@@ -1220,17 +1220,16 @@ export default function PatientPage() {
                 style={{ background: generatingObjectives ? '#26304b' : 'linear-gradient(to right, #9333ea, #7aa2ff)', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 16px', fontWeight: 600, cursor: generatingObjectives ? 'not-allowed' : 'pointer', opacity: generatingObjectives ? 0.7 : 1 }}>
                 {generatingObjectives ? '⏳ Generazione...' : '✨ Suggerisci Da Sedute'}
               </button>
-              {!editObiettiviMode && (obiettiviGenerali.length > 0 || obiettiviSpecifici.length > 0 || esercizi.length > 0) && (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                  {(selectedObiettiviGenerali.size + selectedObiettiviSpecifici.size + selectedEsercizi.size) === 0 && (
-                    <span style={{ fontSize: '11px', color: '#66708a' }}>← Spunta 📤 per selezionare gli elementi da inviare</span>
-                  )}
-                  <button onClick={sendObiettiviToPaziente} disabled={sendingObjectives || (selectedObiettiviGenerali.size + selectedObiettiviSpecifici.size + selectedEsercizi.size) === 0}
-                    style={{ background: sendingObjectives || (selectedObiettiviGenerali.size + selectedObiettiviSpecifici.size + selectedEsercizi.size) === 0 ? '#26304b' : 'linear-gradient(135deg,#22c55e,#16a34a)', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 16px', fontWeight: 600, cursor: (sendingObjectives || (selectedObiettiviGenerali.size + selectedObiettiviSpecifici.size + selectedEsercizi.size) === 0) ? 'not-allowed' : 'pointer', opacity: (sendingObjectives || (selectedObiettiviGenerali.size + selectedObiettiviSpecifici.size + selectedEsercizi.size) === 0) ? 0.5 : 1 }}>
-                    {sendingObjectives ? '⏳ Invio...' : `📤 Invia al Paziente${(selectedObiettiviGenerali.size + selectedObiettiviSpecifici.size + selectedEsercizi.size) > 0 ? ` (${selectedObiettiviGenerali.size + selectedObiettiviSpecifici.size + selectedEsercizi.size})` : ''}`}
+              {!editObiettiviMode && (obiettiviGenerali.length > 0 || obiettiviSpecifici.length > 0 || esercizi.length > 0) && (() => {
+                const tot = selectedObiettiviGenerali.size + selectedObiettiviSpecifici.size + selectedEsercizi.size;
+                return (
+                  <button onClick={sendObiettiviToPaziente} disabled={sendingObjectives || tot === 0}
+                    title={tot === 0 ? 'Spunta la casella verde 📤 accanto agli elementi che vuoi inviare' : `Invia ${tot} element${tot === 1 ? 'o' : 'i'} selezionat${tot === 1 ? 'o' : 'i'}`}
+                    style={{ background: sendingObjectives || tot === 0 ? '#26304b' : 'linear-gradient(135deg,#22c55e,#16a34a)', color: tot === 0 ? '#66708a' : 'white', border: `1px solid ${tot === 0 ? '#26304b' : 'transparent'}`, borderRadius: '8px', padding: '8px 16px', fontWeight: 600, cursor: (sendingObjectives || tot === 0) ? 'not-allowed' : 'pointer', opacity: (sendingObjectives || tot === 0) ? 0.6 : 1, transition: 'all 0.2s' }}>
+                    {sendingObjectives ? '⏳ Invio...' : tot > 0 ? `📤 Invia al Paziente (${tot})` : '📤 Invia al Paziente'}
                   </button>
-                </div>
-              )}
+                );
+              })()}
               {editObiettiviMode ? (
                 <>
                   <button onClick={saveObiettivi} style={btnPrimary}>💾 Salva</button>
