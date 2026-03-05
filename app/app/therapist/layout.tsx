@@ -5,6 +5,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import TherapistAssistant from "@/components/TherapistAssistant";
+import TourGuide from "@/components/TourGuide";
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -75,10 +76,11 @@ export default function TherapistLayout({ children }: { children: React.ReactNod
             </Link>
 
             {/* Desktop Menu */}
-            <nav className="hidden md:flex items-center gap-3">
+            <nav className="hidden md:flex items-center gap-3" data-tour="nav">
               <Link
                 href="/app/therapist/pazienti"
                 className="px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105 text-sm"
+                data-tour="pazienti"
                 style={{
                   background: '#7aa2ff',
                   color: '#0b1022',
@@ -90,6 +92,7 @@ export default function TherapistLayout({ children }: { children: React.ReactNod
               <Link
                 href="/app/therapist/appuntamenti"
                 className="px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105 text-sm"
+                data-tour="appuntamenti"
                 style={{
                   background: '#7aa2ff',
                   color: '#0b1022',
@@ -101,6 +104,7 @@ export default function TherapistLayout({ children }: { children: React.ReactNod
               <Link
                 href="/app/therapist/personal-branding"
                 className="px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105 text-sm"
+                data-tour="branding"
                 style={{
                   background: '#7aa2ff',
                   color: '#0b1022',
@@ -216,9 +220,14 @@ export default function TherapistLayout({ children }: { children: React.ReactNod
       </main>
 
       {/* Chatbot Assistente */}
-      <TherapistAssistant
-        therapistName={therapist?.full_name || therapist?.display_name}
-      />
+      <div data-tour="assistant">
+        <TherapistAssistant
+          therapistName={therapist?.full_name || therapist?.display_name}
+        />
+      </div>
+
+      {/* Visita guidata */}
+      <TourGuide autoStart={true} />
 
       <style jsx global>{`
         @keyframes fadeIn {

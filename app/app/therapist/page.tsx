@@ -139,7 +139,7 @@ export default function Page() {
     <div style={{ padding: '24px' }}>
       <div className="max-w-7xl mx-auto">
         {/* HERO HEADER - Dark theme like login */}
-        <div className="mb-8 p-8 rounded-3xl relative overflow-hidden animate-fadeIn" style={{
+        <div data-tour="dashboard" className="mb-8 p-8 rounded-3xl relative overflow-hidden animate-fadeIn" style={{
           background: '#141a2c',
           border: '2px solid #26304b',
           boxShadow: '0 12px 32px rgba(0,0,0,0.3)'
@@ -249,6 +249,7 @@ export default function Page() {
           {/* Fatture - Dark theme */}
           <Link
             href="/app/therapist/fatture"
+            data-tour="fatture"
             onMouseEnter={() => setHoverFatture(true)}
             onMouseLeave={() => setHoverFatture(false)}
             className="block p-8 rounded-2xl text-center font-semibold text-xl transition-all duration-300 hover:scale-105 hover:-translate-y-1 animate-fadeIn"
@@ -268,6 +269,7 @@ export default function Page() {
           {/* I Tuoi Pazienti - Dark theme */}
           <Link
             href="/app/therapist/pazienti"
+            data-tour="pazienti-widget"
             onMouseEnter={() => setHoverPazienti(true)}
             onMouseLeave={() => setHoverPazienti(false)}
             className="block p-8 rounded-2xl transition-all duration-300 hover:scale-105 hover:-translate-y-1 animate-fadeIn"

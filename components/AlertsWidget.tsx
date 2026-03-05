@@ -29,11 +29,11 @@ export default function AlertsWidget({ therapistId }: AlertsWidgetProps) {
   async function loadAlerts() {
     try {
       const res = await fetch(`/api/get-alerts?therapistId=${therapistId}`);
-      if (!res.ok) throw new Error('Errore caricamento alert');
+      if (!res.ok) { setLoading(false); return; } // fail silently in demo
       const data = await res.json();
       setAlerts(data.alerts || []);
-    } catch (e) {
-      console.error('Errore alert:', e);
+    } catch {
+      // fail silently — non blocca la dashboard in demo
     } finally {
       setLoading(false);
     }

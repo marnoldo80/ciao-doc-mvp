@@ -19,6 +19,56 @@ export default function LoginPage() {
         flexDirection: 'column',
         alignItems: 'center'
       }}>
+        {/* Banner prototipo */}
+        <div style={{
+          width: '100%',
+          maxWidth: '750px',
+          background: 'rgba(255, 190, 50, 0.08)',
+          border: '1px solid rgba(255, 190, 50, 0.3)',
+          borderRadius: '12px',
+          padding: '14px 20px',
+          marginBottom: '20px',
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '12px'
+        }}>
+          <span style={{ fontSize: '20px', flexShrink: 0 }}>⚠️</span>
+          <p style={{ margin: 0, fontSize: '14px', color: '#e8c96a', lineHeight: '1.5' }}>
+            <strong>Stai navigando un prototipo dimostrativo.</strong>{' '}
+            Alcune funzioni non sono ancora attive. Non inserire dati reali di pazienti.
+          </p>
+        </div>
+
+        {/* Messaggio guida tour terapeuta */}
+        <div style={{
+          width: '100%',
+          maxWidth: '750px',
+          background: 'rgba(122, 162, 255, 0.06)',
+          border: '1px solid rgba(122, 162, 255, 0.2)',
+          borderRadius: '12px',
+          padding: '18px 22px',
+          marginBottom: '36px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
+            <span style={{ fontSize: '22px', flexShrink: 0, marginTop: '2px' }}>🎯</span>
+            <div>
+              <p style={{ margin: '0 0 6px', fontSize: '15px', fontWeight: '700', color: '#f1f5ff' }}>
+                Sei qui per valutare cIAo-doc?
+              </p>
+              <p style={{ margin: '0 0 10px', fontSize: '13px', color: '#a8b2d6', lineHeight: '1.6' }}>
+                <strong style={{ color: '#7aa2ff' }}>Registrati come Terapeuta</strong> per esplorare il prototipo completo:
+                dashboard, pazienti, sedute AI, questionari e molto altro.
+                Una volta entrato, una <strong style={{ color: '#7aa2ff' }}>visita guidata automatica</strong> ti mostrerà tutte le funzionalità.
+              </p>
+              <p style={{ margin: 0, fontSize: '12px', color: '#6b7a9e', lineHeight: '1.5' }}>
+                🔒 I dati che inserisci in fase di registrazione (nome, email) sono usati solo per questa demo
+                e per un eventuale futuro ricontatto — solo se lo desideri.
+                Nessuna comunicazione promozionale, puoi richiedere la cancellazione in qualsiasi momento.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Header con logo */}
         <div style={{ textAlign: 'center', marginBottom: '48px' }}>
           <img

@@ -16,8 +16,6 @@ export default function NewPatientPage() {
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [issues, setIssues] = useState("");
-  const [goals, setGoals] = useState("");
   
   // Nuovi campi necessari per consenso
   const [birthDate, setBirthDate] = useState("");
@@ -54,8 +52,6 @@ export default function NewPatientPage() {
           display_name: displayName || null,
           email: email || null,
           phone: phone || null,
-          issues: issues || null,
-          goals: goals || null,
           birth_date: birthDate || null,
           birth_place: birthPlace || null,
           fiscal_code: fiscalCode || null,
@@ -340,44 +336,6 @@ export default function NewPatientPage() {
               maxLength={2} 
             />
           </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1" style={{ color: 'white' }}>
-            Problemi/Sintomi
-          </label>
-          <textarea 
-            className="w-full min-h-[110px] rounded px-3 py-2 outline-none transition-colors duration-300" 
-            style={{
-              backgroundColor: '#0b0f1c',
-              border: '2px solid #26304b',
-              color: 'white'
-            }}
-            onFocus={(e) => e.target.style.borderColor = '#7aa2ff'}
-            onBlur={(e) => e.target.style.borderColor = '#26304b'}
-            value={issues} 
-            onChange={e=>setIssues(e.target.value)}
-            placeholder="Descrivi i problemi o sintomi del paziente..." 
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1" style={{ color: 'white' }}>
-            Obiettivi terapeutici
-          </label>
-          <textarea 
-            className="w-full min-h-[110px] rounded px-3 py-2 outline-none transition-colors duration-300" 
-            style={{
-              backgroundColor: '#0b0f1c',
-              border: '2px solid #26304b',
-              color: 'white'
-            }}
-            onFocus={(e) => e.target.style.borderColor = '#7aa2ff'}
-            onBlur={(e) => e.target.style.borderColor = '#26304b'}
-            value={goals} 
-            onChange={e=>setGoals(e.target.value)}
-            placeholder="Obiettivi del percorso terapeutico..." 
-          />
         </div>
 
         <div className="flex gap-3 pt-4">
